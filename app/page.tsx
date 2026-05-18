@@ -1,50 +1,73 @@
-import { UploadAudit } from "@/components/UploadAudit";
-import Image from "next/image";
+import LessonPlanDropzone from "@/components/LessonPlanDropzone";
+import { BookOpen } from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 font-sans dark:bg-black">
-      <header className="flex items-center justify-between py-6 px-8 border-b border-zinc-200 bg-white dark:bg-black dark:border-zinc-800">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-xs">HT</span>
-          </div>
-          <span className="font-semibold text-zinc-900 dark:text-zinc-50">HecTech Auditor</span>
-        </div>
-      </header>
-
-      <main className="flex flex-1 flex-col items-center justify-center py-20 px-6">
-        <div className="max-w-4xl w-full flex flex-col md:flex-row items-center gap-12">
-          <div className="flex-1 flex flex-col gap-6 text-center md:text-left">
-            <h1 className="text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 leading-[1.1]">
-              Automated <span className="text-blue-600">Cambridge</span> Lesson Plan Audits.
-            </h1>
-            <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-lg">
-              Upload your lesson plans and get an instant pedagogical compliance report powered by Gemini 1.5 Pro. Ensure high-quality teaching standards with every submission.
-            </p>
-            <div className="flex items-center gap-4 justify-center md:justify-start">
-              <div className="flex -space-x-2">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-zinc-200 flex items-center justify-center overflow-hidden">
-                    <div className="w-full h-full bg-zinc-300" />
-                  </div>
-                ))}
-              </div>
-              <p className="text-sm text-zinc-500 font-medium">Trusted by 500+ teachers</p>
+    <main className="min-h-screen bg-slate-900 text-slate-100 font-sans p-6 md:p-12">
+      <div className="max-w-4xl mx-auto space-y-8">
+        
+        {/* Sleek Enterprise Header */}
+        <div className="flex items-center justify-between border-b border-slate-800 pb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-500">
+              <BookOpen size={28} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-amber-200 bg-clip-text text-transparent">
+                HecTech LPAuditor
+              </h1>
+              <p className="text-sm text-slate-400">St. Adelaide International Schools Portal</p>
             </div>
           </div>
-
-          <div className="flex-1 w-full max-w-md">
-            <UploadAudit />
+          <div className="text-right hidden sm:block">
+            <p className="text-xs text-slate-500 font-mono">SYSTEM: ACTIVE</p>
           </div>
         </div>
-      </main>
 
-      <footer className="py-10 px-8 border-t border-zinc-200 bg-white dark:bg-black dark:border-zinc-800 text-center">
-        <p className="text-sm text-zinc-500">
-          © 2026 HecTech Ltd. Powered by Gemini & Supabase.
-        </p>
-      </footer>
-    </div>
+        {/* Dashboard Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          {/* Left Column: Submission Form Card */}
+          <div className="md:col-span-2 bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-200">Submit Weekly Lesson Plan</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Upload your document to initialize the automated Cambridge pedagogical audit.
+              </p>
+            </div>
+            
+            {/* Injecting our Dropzone */}
+            <LessonPlanDropzone />
+            
+            <button className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold rounded-lg shadow-lg hover:shadow-amber-500/10 transition-all text-sm">
+              Initialize AI Audit
+            </button>
+          </div>
+
+          {/* Right Column: Mini Info Card */}
+          <div className="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-xl h-fit space-y-4">
+            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+              Audit Guidelines
+            </h3>
+            <ul className="space-y-3 text-xs text-slate-400">
+              <li className="flex gap-2">
+                <span className="text-amber-500">•</span>
+                Ensure layout tracking forms are left intact within your Word document.
+              </li>
+              <li className="flex gap-2">
+                <span className="text-amber-500">•</span>
+                Specify dedicated Test or Assessment days directly within your main activity block.
+              </li>
+              <li className="flex gap-2">
+                <span className="text-amber-500">•</span>
+                Continuous assessment data must follow chronological subject sequencing.
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+      </div>
+    </main>
   );
 }
