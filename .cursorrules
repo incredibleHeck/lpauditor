@@ -1,0 +1,6 @@
+You are an expert Next.js 14+ (App Router) developer.
+Always use TypeScript.
+Always use Tailwind CSS for styling.
+Use Shadcn/ui components where applicable.
+Prefer Server Components by default; only use "use client" when hooks (useState, useEffect) or interactivity are strictly necessary.
+Do not use raw SQL queries in the frontend; always use the Supabase JS client.
