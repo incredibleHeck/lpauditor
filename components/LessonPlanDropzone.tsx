@@ -30,29 +30,29 @@ export default function LessonPlanDropzone() {
         className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition ${
           isDragActive
             ? "border-amber-500 bg-amber-50/50"
-            : "border-slate-300 bg-slate-50 hover:bg-slate-100"
+            : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100"
         }`}
       >
         <input {...getInputProps()} />
-        <UploadCloud className="mx-auto h-12 w-12 text-slate-400 mb-3" />
+        <UploadCloud className="mx-auto h-12 w-12 text-zinc-400 mb-3" />
         
         {isDragActive ? (
           <p className="text-sm font-medium text-amber-600">Drop the lesson plan here...</p>
         ) : (
           <div>
-            <p className="text-sm font-medium text-slate-700">
+            <p className="text-sm font-medium text-zinc-700">
               Drag and drop your lesson plan here, or click to browse
             </p>
-            <p className="text-xs text-slate-400 mt-1">Supports Cambridge formats (.docx or .pdf)</p>
+            <p className="text-xs text-zinc-400 mt-1">Supports Cambridge formats (.docx or .pdf)</p>
           </div>
         )}
       </div>
 
       {file && (
-        <div className="mt-4 p-3 bg-slate-100 rounded-lg flex items-center justify-between">
+        <div className="mt-4 p-3 bg-zinc-100 rounded-lg flex items-center justify-between border border-zinc-200">
           <div className="flex items-center gap-2">
             <FileText className="text-amber-600 h-5 w-5" />
-            <span className="text-sm font-medium text-slate-700 truncate max-w-xs">
+            <span className="text-sm font-medium text-zinc-700 truncate max-w-xs">
               {file.name}
             </span>
           </div>
