@@ -4,7 +4,7 @@ const apiKey = process.env.GEMINI_API_KEY!;
 const genAI = new GoogleGenerativeAI(apiKey);
 
 export const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-pro", // Or gemini-1.5-flash for speed
+  model: "gemini-2.5-pro", // Or gemini-1.5-flash for speed
 });
 
 export async function uploadFileToGemini(uri: string) {
