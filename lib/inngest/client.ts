@@ -15,7 +15,7 @@ export type Events = {
 // Initialize the Inngest client
 export const inngest = new Inngest({ 
   id: "lpauditor",
-  schemas: (s) => ({
+  schemas: (s: any) => ({
     "lesson_plan.uploaded": s.object({
       submissionId: s.string(),
       fileUrl: s.string(),
