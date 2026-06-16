@@ -26,7 +26,7 @@ export const processLessonPlanAudit = inngest.createFunction(
     triggers: [{ event: "lesson_plan.uploaded" }] 
   },
   async ({ event, step }) => {
-    const { submissionId, fileUrl } = event.data;
+    const { submissionId, fileUrl, subject, gradeLevel } = event.data;
 
     // Step 0: Mark as PROCESSING in Database
     await step.run("update-status-processing", async () => {
@@ -38,8 +38,8 @@ export const processLessonPlanAudit = inngest.createFunction(
       if (error) throw new Error(`Failed to update status to PROCESSING: ${error.message}`);
     });
 
-    // Step A: Download File from Supabase Storage
-    const tempFilePath = await step.run("download-file", async () => {
+    // Combined Step A & B: Download file and upload to Gemini File API in one execution step
+    const geminiFile = await step.run("retrieve-and-upload-to-gemini", async () => {
       const { data, error } = await supabaseAdmin.storage
         .from('lesson-plans')
         .download(fileUrl);
@@ -47,18 +47,13 @@ export const processLessonPlanAudit = inngest.createFunction(
       if (error) throw new Error(`Failed to download file from Supabase: ${error.message}`);
 
       const fileName = `${submissionId}_${path.basename(fileUrl)}`;
-      const filePath = path.join(os.tmpdir(), fileName);
+      const tempFilePath = path.join(os.tmpdir(), fileName);
       
-      // Convert Blob to Buffer and write to local temp storage
-      const buffer = Buffer.from(await data.arrayBuffer());
-      fs.writeFileSync(filePath, buffer);
-      
-      return filePath;
-    });
-
-    // Step B: Upload to Gemini File API for Multimodal Support
-    const geminiFile = await step.run("upload-to-gemini", async () => {
       try {
+        // Convert Blob to Buffer and write to local temp storage
+        const buffer = Buffer.from(await data.arrayBuffer());
+        fs.writeFileSync(tempFilePath, buffer);
+
         const uploadResult = await fileManager.uploadFile(tempFilePath, {
           mimeType: fileUrl.endsWith('.pdf') ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           displayName: `Lesson Plan ${submissionId}`,
@@ -70,7 +65,7 @@ export const processLessonPlanAudit = inngest.createFunction(
           mimeType: uploadResult.file.mimeType
         };
       } finally {
-        // Cleanup local temp file immediately after upload
+        // Clean up temp file immediately inside the same execution block
         if (fs.existsSync(tempFilePath)) {
           fs.unlinkSync(tempFilePath);
         }
@@ -169,7 +164,7 @@ export const processLessonPlanAudit = inngest.createFunction(
               fileUri: geminiFile.uri
             }
           },
-          { text: "Please audit this uploaded lesson plan against the standard rubrics." }
+          { text: `Please audit this uploaded lesson plan for ${gradeLevel || 'students'} ${subject || ''} against the standard rubrics. Ensure the content is strictly age-appropriate and pedagogically aligned for this specific grade and subject.` }
         ]);
 
         const responseText = result.response.text();
@@ -221,7 +216,22 @@ export const processLessonPlanAudit = inngest.createFunction(
       // This runs regardless of success or failure to maintain quota.
       await step.run("cleanup-gemini-file", async () => {
         try {
-          await fileManager.deleteFile(geminiFile.name);
+          console.log(`Cleaning up Gemini files for submission ${submissionId}...`);
+          let pageToken: string | undefined = undefined;
+          
+          do {
+            const listResponse = await fileManager.listFiles({ pageSize: 100, pageToken });
+            
+            if (listResponse.files) {
+              const filesToDelete = listResponse.files.filter(f => f.displayName && f.displayName.includes(submissionId));
+              for (const f of filesToDelete) {
+                await fileManager.deleteFile(f.name);
+                console.log(`Deleted orphaned Gemini file: ${f.name}`);
+              }
+            }
+            pageToken = listResponse.nextPageToken;
+          } while (pageToken);
+          
         } catch (cleanupError) {
           console.error("Failed to cleanup Gemini file:", cleanupError);
         }

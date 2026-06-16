@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getSubmissionStatus, getUserSubmissions } from "@/app/actions/submissions";
+import { getSubmissionStatus, getDepartmentSubmissions } from "@/app/actions/submissions";
 import { FileText, Loader2, Play, CheckCircle, AlertTriangle, Clock, Calendar } from "lucide-react";
 import AuditDetailsModal from "./AuditDetailsModal";
 import { supabase } from "@/lib/supabase";
@@ -27,15 +27,16 @@ interface Submission {
   status: string | null;
   created_at: string;
   ai_audits: Audit[] | Audit | null;
+  profiles?: { full_name: string; department: string };
 }
 
-interface SubmissionsDashboardProps {
+interface HODDashboardProps {
   initialSubmissions: Submission[];
-  teacherId: string;
-  refreshTrigger: number; // Increment to force a full reload
+  department: string;
+  refreshTrigger?: number;
 }
 
-export default function SubmissionsDashboard({ initialSubmissions, teacherId, refreshTrigger }: SubmissionsDashboardProps) {
+export default function HODDashboard({ initialSubmissions, department, refreshTrigger = 0 }: HODDashboardProps) {
   const [submissions, setSubmissions] = useState<Submission[]>(initialSubmissions);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [selectedAudit, setSelectedAudit] = useState<Audit | null>(null);
@@ -50,18 +51,19 @@ export default function SubmissionsDashboard({ initialSubmissions, teacherId, re
   useEffect(() => {
     if (refreshTrigger > 0) {
       const reload = async () => {
-        const res = await getUserSubmissions(teacherId);
+        const res = await getDepartmentSubmissions(department);
         if (res.success && res.data) {
-          // Normalize ai_audits
           setSubmissions(res.data as unknown as Submission[]);
         }
       };
       reload();
     }
-  }, [refreshTrigger, teacherId]);
+  }, [refreshTrigger, department]);
 
   // Realtime Supabase Subscription for Submissions
   useEffect(() => {
+    // Note: Since we are joining profiles, listening to updates might require a different filter,
+    // but for simplicity, we can listen to all submissions and then re-fetch the department ones if anything changes.
     const channel = supabase
       .channel('schema-db-changes')
       .on(
@@ -70,16 +72,15 @@ export default function SubmissionsDashboard({ initialSubmissions, teacherId, re
           event: 'UPDATE',
           schema: 'public',
           table: 'submissions',
-          filter: `teacher_id=eq.${teacherId}`
         },
         async (payload) => {
-          console.log("Realtime update received:", payload);
-          // If a status changes, we fetch the complete new submission state including its ai_audits
+          // Refresh the whole list because we need the profiles join anyway,
+          // or we can just fetch the single one and update it if it belongs to the department.
           const statusRes = await getSubmissionStatus(payload.new.id);
           if (statusRes.success && statusRes.data) {
             const freshSub = statusRes.data as unknown as Submission;
             setSubmissions((prev) => 
-              prev.map((sub) => (sub.id === freshSub.id ? freshSub : sub))
+              prev.map((sub) => (sub.id === freshSub.id ? { ...freshSub, profiles: sub.profiles } : sub))
             );
           }
         }
@@ -89,7 +90,7 @@ export default function SubmissionsDashboard({ initialSubmissions, teacherId, re
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [teacherId]);
+  }, []);
 
   const handleViewAudit = (sub: Submission) => {
     // Normalise ai_audits from array to single object if needed
@@ -143,8 +144,8 @@ export default function SubmissionsDashboard({ initialSubmissions, teacherId, re
     <div className="space-y-6">
       <div className="flex items-center justify-between border-b border-zinc-200 pb-4">
         <div>
-          <h2 className="text-xl font-bold text-zinc-900">Your Audit Submissions</h2>
-          <p className="text-sm text-zinc-500 mt-0.5">Track and view compliance results for weekly uploads.</p>
+          <h2 className="text-xl font-bold text-zinc-900">{department} Department Submissions</h2>
+          <p className="text-sm text-zinc-500 mt-0.5">Track and view compliance results for all teachers in your department.</p>
         </div>
         <span className="px-2.5 py-1 bg-zinc-100 border border-zinc-200 text-zinc-800 text-xs font-bold rounded-lg uppercase tracking-wide">
           {submissions.length} Total
@@ -164,6 +165,7 @@ export default function SubmissionsDashboard({ initialSubmissions, teacherId, re
               <thead className="bg-zinc-50/70 text-xs font-bold text-zinc-400 uppercase tracking-wider">
                 <tr>
                   <th className="px-6 py-4">Lesson Plan</th>
+                  <th className="px-6 py-4">Teacher</th>
                   <th className="px-6 py-4">Subject</th>
                   <th className="px-6 py-4">Week / Grade</th>
                   <th className="px-6 py-4">Status</th>
@@ -201,6 +203,11 @@ export default function SubmissionsDashboard({ initialSubmissions, teacherId, re
                             </span>
                           </div>
                         </div>
+                      </td>
+
+                      {/* Teacher */}
+                      <td className="px-6 py-4.5 align-middle">
+                        <span className="text-zinc-900 font-medium">{sub.profiles?.full_name || "Unknown"}</span>
                       </td>
 
                       {/* Subject */}

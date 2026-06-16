@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/server";
-import { getUserSubmissions } from "@/app/actions/submissions";
+import { getUserSubmissions, getDepartmentSubmissions } from "@/app/actions/submissions";
 import DashboardPageContent from "@/components/DashboardPageContent";
+import HODDashboard from "@/components/HODDashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,21 @@ export default async function Home() {
     department: "Science"
   };
 
-  // 3. Fetch User Submissions
+  if (normalizedProfile.role === "HOD") {
+    // Fetch HOD Department Submissions
+    const hodRes = await getDepartmentSubmissions(normalizedProfile.department);
+    const departmentSubmissions = hodRes.data || [];
+    return (
+      <div className="max-w-6xl mx-auto p-6 md:p-12">
+        <HODDashboard 
+          initialSubmissions={departmentSubmissions as any}
+          department={normalizedProfile.department}
+        />
+      </div>
+    );
+  }
+
+  // 3. Fetch User Submissions (Teacher View)
   const submissionsRes = await getUserSubmissions(user.id);
   const initialSubmissions = submissionsRes.data || [];
 

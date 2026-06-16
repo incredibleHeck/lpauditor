@@ -8,18 +8,23 @@ export async function submitLessonPlan({
   fileUrl,
   subject,
   weekName,
+  gradeLevel,
 }: {
   fileUrl: string;
   subject: string;
   weekName: string;
+  gradeLevel: string;
 }) {
   try {
     // 1. Get the authenticated user dynamically from session
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     
-    // Fallback to Hector Aryiku's hardcoded ID in development/mock situations
-    const teacherId = user?.id || '025c5bfd-3c0c-44e9-ab43-def912de64c2';
+    if (!user) {
+      throw new Error("Unauthorized: You must be logged in to submit a lesson plan.");
+    }
+
+    const teacherId = user.id;
 
     const { data, error } = await supabaseAdmin
       .from('submissions')
@@ -29,7 +34,7 @@ export async function submitLessonPlan({
         week_name: weekName,
         teacher_id: teacherId,
         status: 'PENDING',
-        grade_level: 'Grade 1' // Default for now
+        grade_level: gradeLevel
       })
       .select()
       .single();
@@ -47,6 +52,7 @@ export async function submitLessonPlan({
         fileUrl: data.file_url,
         subject: data.subject,
         weekName: data.week_name,
+        gradeLevel: data.grade_level,
       },
     });
 
@@ -95,3 +101,23 @@ export async function getSubmissionStatus(submissionId: string) {
     return { success: false, error: err.message };
   }
 }
+
+/**
+ * Fetch all submissions for a specific department (for HOD view).
+ */
+export async function getDepartmentSubmissions(department: string) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('submissions')
+      .select('*, ai_audits(*), profiles!inner(full_name, department)')
+      .eq('profiles.department', department)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return { success: true, data };
+  } catch (err: any) {
+    console.error("Failed to get department submissions:", err);
+    return { success: false, error: err.message, data: [] };
+  }
+}
+

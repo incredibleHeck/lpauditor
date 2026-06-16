@@ -5,6 +5,7 @@ import { useDropzone } from "react-dropzone";
 import { UploadCloud, FileText, CheckCircle, Loader2, AlertCircle, WifiOff } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { submitLessonPlan } from "@/app/actions/submissions";
+import { toast } from "sonner";
 
 // IndexedDB Helper Functions
 const openDB = (): Promise<IDBDatabase> => {
@@ -21,7 +22,7 @@ const openDB = (): Promise<IDBDatabase> => {
   });
 };
 
-const storeOfflineSubmission = async (file: File, subject: string, weekName: string): Promise<void> => {
+const storeOfflineSubmission = async (file: File, subject: string, weekName: string, gradeLevel: string): Promise<void> => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction("submissions", "readwrite");
@@ -31,6 +32,7 @@ const storeOfflineSubmission = async (file: File, subject: string, weekName: str
       fileName: file.name,
       subject,
       weekName,
+      gradeLevel,
       created_at: new Date().toISOString()
     });
     transaction.oncomplete = () => resolve();
@@ -46,6 +48,9 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
   const [file, setFile] = useState<File | null>(null);
   const [uploadState, setUploadState] = useState<"idle" | "uploading" | "success" | "error" | "offline">("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [subject, setSubject] = useState("Primary Science");
+  const [gradeLevel, setGradeLevel] = useState("Grade 1");
+  const [weekName, setWeekName] = useState("Week 1");
 
   // Sync Offline Queue when browser goes back online
   useEffect(() => {
@@ -84,6 +89,7 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
                 fileUrl: storageData.path,
                 subject: item.subject,
                 weekName: item.weekName,
+                gradeLevel: item.gradeLevel || "Grade 1",
               });
 
               if (!success) throw new Error(actionError);
@@ -98,6 +104,7 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
 
           // Trigger refresh on parent once sync completes
           if (onUploadSuccess) onUploadSuccess();
+          toast.success("Offline submissions synced successfully!");
         };
       } catch (err) {
         console.error("Offline sync manager failed to initialize:", err);
@@ -119,15 +126,13 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
     setFile(selectedFile);
     setErrorMessage("");
 
-    const subject = "Primary Science";
-    const weekName = "Week 1";
-
     // Offline mode support
     if (!navigator.onLine) {
       setUploadState("offline");
       try {
-        await storeOfflineSubmission(selectedFile, subject, weekName);
+        await storeOfflineSubmission(selectedFile, subject, weekName, gradeLevel);
         console.log("Offline mode: submission buffered in IndexedDB.");
+        toast.info("You're offline. Lesson plan queued for upload.");
       } catch (error: any) {
         setUploadState("error");
         setErrorMessage("IndexedDB storage failed. Please connect to the internet.");
@@ -158,6 +163,7 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
         fileUrl: storageData.path,
         subject: subject, 
         weekName: weekName,
+        gradeLevel: gradeLevel,
       });
 
       if (!success) throw new Error(actionError);
@@ -179,16 +185,73 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    onDropRejected: (fileRejections) => {
+      const errorMsg = fileRejections[0]?.errors[0]?.message;
+      if (errorMsg) {
+        toast.error(`File rejected: ${errorMsg}`);
+        setErrorMessage(`File rejected: ${errorMsg}`);
+      }
+    },
     accept: {
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
       "application/pdf": [".pdf"],
     },
     maxFiles: 1,
+    maxSize: 10485760, // 10MB
     disabled: uploadState === "uploading" || uploadState === "success"
   });
 
   return (
     <div className="w-full">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-left">
+        <div>
+          <label className="block text-xs font-bold text-slate-700 mb-1">Subject</label>
+          <select 
+            value={subject} 
+            onChange={(e) => setSubject(e.target.value)}
+            disabled={uploadState === "uploading" || uploadState === "success"}
+            className="w-full text-sm border border-slate-300 rounded-md py-1.5 px-3 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+          >
+            <option>Primary Science</option>
+            <option>Mathematics</option>
+            <option>English Language</option>
+            <option>History</option>
+            <option>Geography</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-700 mb-1">Grade Level</label>
+          <select 
+            value={gradeLevel} 
+            onChange={(e) => setGradeLevel(e.target.value)}
+            disabled={uploadState === "uploading" || uploadState === "success"}
+            className="w-full text-sm border border-slate-300 rounded-md py-1.5 px-3 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+          >
+            <option>Grade 1</option>
+            <option>Grade 2</option>
+            <option>Grade 3</option>
+            <option>Grade 4</option>
+            <option>Grade 5</option>
+            <option>Grade 6</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-700 mb-1">Week</label>
+          <select 
+            value={weekName} 
+            onChange={(e) => setWeekName(e.target.value)}
+            disabled={uploadState === "uploading" || uploadState === "success"}
+            className="w-full text-sm border border-slate-300 rounded-md py-1.5 px-3 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+          >
+            <option>Week 1</option>
+            <option>Week 2</option>
+            <option>Week 3</option>
+            <option>Week 4</option>
+            <option>Week 5</option>
+            <option>Week 6</option>
+          </select>
+        </div>
+      </div>
       <div
         {...getRootProps()}
         className={`border-2 border-dashed rounded-xl p-8 text-center transition ${
