@@ -97,8 +97,9 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
               // Delete synced item from IndexedDB
               const deleteTx = db.transaction("submissions", "readwrite");
               deleteTx.objectStore("submissions").delete(item.id);
-            } catch (err: any) {
-              console.error(`Failed to sync offline item ID ${item.id}:`, err.message);
+            } catch (err: unknown) {
+              const errorMessage = err instanceof Error ? err.message : String(err);
+              console.error(`Failed to sync offline item ID ${item.id}:`, errorMessage);
             }
           }
 
@@ -133,7 +134,7 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
         await storeOfflineSubmission(selectedFile, subject, weekName, gradeLevel);
         console.log("Offline mode: submission buffered in IndexedDB.");
         toast.info("You're offline. Lesson plan queued for upload.");
-      } catch (error: any) {
+      } catch (error: unknown) {
         setUploadState("error");
         setErrorMessage("IndexedDB storage failed. Please connect to the internet.");
       }
@@ -176,12 +177,13 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
         onUploadSuccess();
       }
 
-    } catch (error: any) {
-      console.error("Process failed:", error.message);
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      console.error("Process failed:", err.message);
       setUploadState("error");
-      setErrorMessage(error.message || "Failed to process lesson plan. Please try again.");
+      setErrorMessage(err.message || "Failed to process lesson plan. Please try again.");
     }
-  }, [onUploadSuccess]);
+  }, [onUploadSuccess, subject, gradeLevel, weekName]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

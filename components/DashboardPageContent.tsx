@@ -16,7 +16,7 @@ interface Submission {
   grade_level: string;
   status: string | null;
   created_at: string;
-  ai_audits: any;
+  ai_audits: unknown;
 }
 
 interface DashboardPageContentProps {

@@ -149,3 +149,36 @@ Assessment:
   "summary": "This lesson plan is highly compliant with Cambridge standards, showing strong integration of active teaching methods, peer assessment, and structured writing scaffoldings. The only minor issue is a slight time overflow."
 }
 `;
+
+export const CAMBRIDGE_SUBJECT_GUIDES: Record<string, string> = {
+  "Primary Science": `
+=== PRIMARY SCIENCE YARDSTICK ===
+- **Inquiry-Based Learning**: The lesson must prominently feature students asking questions, predicting outcomes, and engaging in hands-on exploration.
+- **Scientific Vocabulary**: Must explicitly teach and assess grade-appropriate scientific terms.
+- **Real-World Connection**: Must relate the scientific concept to students' daily lives or observable phenomena.
+`,
+  "Mathematics": `
+=== MATHEMATICS YARDSTICK ===
+- **Concrete-Pictorial-Abstract (CPA)**: The lesson should clearly sequence learning from concrete manipulatives to pictorial representations, and finally abstract algorithms.
+- **Problem Solving**: Must include opportunities for students to solve non-routine problems, not just rote calculation.
+- **Mathematical Talk**: Opportunities for students to articulate their reasoning using mathematical terminology must be embedded.
+`,
+  "English Language": `
+=== ENGLISH LANGUAGE YARDSTICK ===
+- **Phonics & Structure**: For primary levels, clear integration of systematic synthetic phonics or structured spelling rules.
+- **Text Immersion**: Lessons must analyze a high-quality model text before asking students to write.
+- **Oracy Focus**: Explicit opportunities for structured speaking and listening activities (e.g., debate, paired discussion) before writing.
+`,
+  "History": `
+=== HISTORY YARDSTICK ===
+- **Chronological Understanding**: Must clearly locate the topic within a historical timeline.
+- **Source Analysis**: Students must critically evaluate primary or secondary sources, discussing bias or reliability.
+- **Cause and Consequence**: The lesson must explore the reasons behind events and their historical impacts.
+`,
+  "Geography": `
+=== GEOGRAPHY YARDSTICK ===
+- **Spatial Awareness**: Must involve the use of maps, atlases, globes, or digital mapping.
+- **Human-Physical Interaction**: Should explore the relationship between physical environments and human activity.
+- **Fieldwork/Data**: Where applicable, inclusion of collecting, analyzing, or interpreting geographical data.
+`
+};

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { getSubmissionStatus, getDepartmentSubmissions } from "@/app/actions/submissions";
-import { FileText, Loader2, Play, CheckCircle, AlertTriangle, Clock, Calendar } from "lucide-react";
+import { FileText, Loader2, CheckCircle, AlertTriangle, Clock, Calendar } from "lucide-react";
 import AuditDetailsModal from "./AuditDetailsModal";
 import { supabase } from "@/lib/supabase";
 
@@ -11,9 +11,9 @@ interface Audit {
   submission_id: string;
   score: number | null;
   lessons_detected: number | null;
-  strengths: any;
-  flags: any;
-  raw_response: any;
+  strengths: string[];
+  flags: string[];
+  raw_response: Record<string, unknown>;
   created_at: string;
 }
 
@@ -41,11 +41,13 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [selectedAudit, setSelectedAudit] = useState<Audit | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [prevInitialSubmissions, setPrevInitialSubmissions] = useState(initialSubmissions);
 
-  // Sync state with props when initialSubmissions or trigger changes
-  useEffect(() => {
+  // Adjust state during render when props change (avoids useEffect cascading renders)
+  if (initialSubmissions !== prevInitialSubmissions) {
+    setPrevInitialSubmissions(initialSubmissions);
     setSubmissions(initialSubmissions);
-  }, [initialSubmissions]);
+  }
 
   // Load submissions whenever trigger changes
   useEffect(() => {
@@ -53,7 +55,7 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
       const reload = async () => {
         const res = await getDepartmentSubmissions(department);
         if (res.success && res.data) {
-          setSubmissions(res.data as unknown as Submission[]);
+          setSubmissions(res.data as Submission[]);
         }
       };
       reload();
@@ -78,7 +80,7 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
           // or we can just fetch the single one and update it if it belongs to the department.
           const statusRes = await getSubmissionStatus(payload.new.id);
           if (statusRes.success && statusRes.data) {
-            const freshSub = statusRes.data as unknown as Submission;
+            const freshSub = statusRes.data as Submission;
             setSubmissions((prev) => 
               prev.map((sub) => (sub.id === freshSub.id ? { ...freshSub, profiles: sub.profiles } : sub))
             );
