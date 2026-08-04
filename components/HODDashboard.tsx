@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getSubmissionStatus, getDepartmentSubmissions } from "@/app/actions/submissions";
-import { FileText, Loader2, CheckCircle, AlertTriangle, Clock, Calendar } from "lucide-react";
+import { getDepartmentSubmissions, getDepartmentAnalytics } from "@/app/actions/submissions";
+import { FileText, Loader2, CheckCircle, AlertTriangle, Clock, Calendar, Sparkles, Users, ShieldAlert, Award } from "lucide-react";
 import AuditDetailsModal from "./AuditDetailsModal";
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/firebase";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 
 interface Audit {
   id: string;
@@ -43,59 +44,77 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [prevInitialSubmissions, setPrevInitialSubmissions] = useState(initialSubmissions);
 
-  // Adjust state during render when props change (avoids useEffect cascading renders)
+  const [analytics, setAnalytics] = useState<{
+    stats: {
+      totalCount: number;
+      completedCount: number;
+      pendingCount: number;
+      failedCount: number;
+      averageScore: number;
+      underperformingCount: number;
+      commonFlags: string[];
+    };
+    brief: string;
+  } | null>(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const fetchAnalytics = async () => {
+      setLoadingAnalytics(true);
+      const res = await getDepartmentAnalytics(department);
+      if (active && res.success && res.stats) {
+        setAnalytics({
+          stats: res.stats,
+          brief: res.brief || ""
+        });
+      }
+      if (active) {
+        setLoadingAnalytics(false);
+      }
+    };
+    fetchAnalytics();
+    return () => {
+      active = false;
+    };
+  }, [department, submissions]);
+
   if (initialSubmissions !== prevInitialSubmissions) {
     setPrevInitialSubmissions(initialSubmissions);
     setSubmissions(initialSubmissions);
   }
 
-  // Load submissions whenever trigger changes
+  const reloadSubmissions = async () => {
+    if (!department) return;
+    const res = await getDepartmentSubmissions(department);
+    if (res.success && res.data) {
+      setSubmissions(res.data as Submission[]);
+    }
+  };
+
   useEffect(() => {
     if (refreshTrigger > 0) {
-      const reload = async () => {
-        const res = await getDepartmentSubmissions(department);
-        if (res.success && res.data) {
-          setSubmissions(res.data as Submission[]);
-        }
-      };
-      reload();
+      reloadSubmissions();
     }
   }, [refreshTrigger, department]);
 
-  // Realtime Supabase Subscription for Submissions
+  // Realtime Cloud Firestore listener for department
   useEffect(() => {
-    // Note: Since we are joining profiles, listening to updates might require a different filter,
-    // but for simplicity, we can listen to all submissions and then re-fetch the department ones if anything changes.
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'submissions',
-        },
-        async (payload) => {
-          // Refresh the whole list because we need the profiles join anyway,
-          // or we can just fetch the single one and update it if it belongs to the department.
-          const statusRes = await getSubmissionStatus(payload.new.id);
-          if (statusRes.success && statusRes.data) {
-            const freshSub = statusRes.data as Submission;
-            setSubmissions((prev) => 
-              prev.map((sub) => (sub.id === freshSub.id ? { ...freshSub, profiles: sub.profiles } : sub))
-            );
-          }
-        }
-      )
-      .subscribe();
+    if (!department) return;
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+    const q = query(
+      collection(db, "submissions"),
+      where("subject", "==", department)
+    );
+
+    const unsubscribe = onSnapshot(q, async () => {
+      await reloadSubmissions();
+    });
+
+    return () => unsubscribe();
+  }, [department]);
 
   const handleViewAudit = (sub: Submission) => {
-    // Normalise ai_audits from array to single object if needed
     const rawAudit = sub.ai_audits;
     let auditObj: Audit | null = null;
     
@@ -116,7 +135,6 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
     try {
       const parts = url.split("/");
       const rawName = parts[parts.length - 1];
-      // Strip off the random token prefix if generated
       const cleanParts = rawName.split("_");
       if (cleanParts.length > 1) {
         return cleanParts.slice(1).join("_");
@@ -154,6 +172,85 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
         </span>
       </div>
 
+      {/* KPI Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-sm flex items-center justify-between">
+          <div className="space-y-1">
+            <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Average Compliance</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-3xl font-black text-zinc-900">
+                {loadingAnalytics ? "..." : `${analytics?.stats.averageScore || 0}%`}
+              </span>
+            </div>
+            <p className="text-[11px] text-zinc-500">Across all completed lesson plans</p>
+          </div>
+          <div className={`p-3 rounded-xl border shrink-0 ${
+            (analytics?.stats.averageScore || 0) >= 80 ? "bg-emerald-50 border-emerald-100 text-emerald-600" :
+            (analytics?.stats.averageScore || 0) >= 50 ? "bg-amber-50 border-amber-100 text-amber-600" :
+            "bg-red-50 border-red-100 text-red-600"
+          }`}>
+            <Award size={24} />
+          </div>
+        </div>
+
+        <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-sm flex items-center justify-between">
+          <div className="space-y-1">
+            <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Submission Status</span>
+            <div className="text-sm font-semibold text-zinc-700 flex flex-wrap gap-x-3 gap-y-1 mt-1">
+              <span className="text-green-600">{analytics?.stats.completedCount || 0} Audited</span>
+              <span className="text-amber-600">{analytics?.stats.pendingCount || 0} Pending</span>
+              {analytics?.stats.failedCount ? <span className="text-red-500">{analytics?.stats.failedCount} Failed</span> : null}
+            </div>
+            <p className="text-[11px] text-zinc-500 mt-0.5">Total: {analytics?.stats.totalCount || 0} uploads</p>
+          </div>
+          <div className="p-3 bg-zinc-50 border border-zinc-100 rounded-xl text-zinc-600 shrink-0">
+            <Users size={24} />
+          </div>
+        </div>
+
+        <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-sm flex items-center justify-between">
+          <div className="space-y-1">
+            <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Critical Reviews</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-3xl font-black text-red-600">
+                {loadingAnalytics ? "..." : analytics?.stats.underperformingCount || 0}
+              </span>
+            </div>
+            <p className="text-[11px] text-zinc-500">Scored under 50% threshold</p>
+          </div>
+          <div className={`p-3 rounded-xl border shrink-0 ${
+            (analytics?.stats.underperformingCount || 0) > 0 ? "bg-red-50 border-red-100 text-red-600 animate-pulse" : "bg-zinc-50 border-zinc-100 text-zinc-400"
+          }`}>
+            <ShieldAlert size={24} />
+          </div>
+        </div>
+      </div>
+
+      {/* AI Weekly Briefing Panel */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-amber-500/5 via-amber-600/[0.02] to-transparent border border-amber-500/20 rounded-2xl p-6 shadow-sm space-y-4">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none" />
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-600">
+            <Sparkles size={18} />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-zinc-900">Department AI Weekly Briefing</h3>
+            <p className="text-xs text-zinc-500">Gemini 3.6 Flash synthesis of compliance trends</p>
+          </div>
+        </div>
+        
+        {loadingAnalytics ? (
+          <div className="space-y-2 py-1 animate-pulse">
+            <div className="h-4 bg-zinc-200/60 rounded w-full"></div>
+            <div className="h-4 bg-zinc-200/60 rounded w-5/6"></div>
+          </div>
+        ) : (
+          <p className="text-sm text-zinc-700 leading-relaxed font-normal">
+            {analytics?.brief}
+          </p>
+        )}
+      </div>
+
       {submissions.length === 0 ? (
         <div className="text-center py-12 border border-dashed border-zinc-200 bg-white rounded-xl shadow-sm">
           <FileText className="mx-auto h-12 w-12 text-zinc-300 mb-3" />
@@ -183,14 +280,12 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
                   const isCompleted = sub.status === "COMPLETED";
                   const isFailed = sub.status === "FAILED";
 
-                  // Extract audit score if complete
                   const rawAudit = sub.ai_audits;
                   const audit = Array.isArray(rawAudit) ? rawAudit[0] : rawAudit;
                   const score = audit?.score;
 
                   return (
                     <tr key={sub.id} className="hover:bg-zinc-50/50 transition-colors">
-                      {/* Filename & date */}
                       <td className="px-6 py-4.5">
                         <div className="flex items-center gap-3">
                           <div className="p-2 bg-amber-50 rounded-lg text-amber-600 border border-amber-100 shrink-0">
@@ -207,17 +302,14 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
                         </div>
                       </td>
 
-                      {/* Teacher */}
                       <td className="px-6 py-4.5 align-middle">
-                        <span className="text-zinc-900 font-medium">{sub.profiles?.full_name || "Unknown"}</span>
+                        <span className="text-zinc-900 font-medium">{sub.profiles?.full_name || "Teacher"}</span>
                       </td>
 
-                      {/* Subject */}
                       <td className="px-6 py-4.5 align-middle">
                         <span className="text-zinc-600">{sub.subject}</span>
                       </td>
 
-                      {/* Week & Grade */}
                       <td className="px-6 py-4.5 align-middle">
                         <div className="space-y-0.5">
                           <p className="text-zinc-700 font-semibold">{sub.week_name}</p>
@@ -225,7 +317,6 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
                         </div>
                       </td>
 
-                      {/* Status badge */}
                       <td className="px-6 py-4.5 align-middle">
                         {isPending && (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-700 text-xs font-bold rounded-lg">
@@ -249,7 +340,6 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
                         )}
                       </td>
 
-                      {/* Compliance score metric */}
                       <td className="px-6 py-4.5 align-middle">
                         {isCompleted && score !== undefined && score !== null ? (
                           <div className="flex items-center gap-2">
@@ -274,7 +364,6 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
                         )}
                       </td>
 
-                      {/* Row Action button */}
                       <td className="px-6 py-4.5 align-middle text-right">
                         {isCompleted && audit ? (
                           <button
@@ -301,7 +390,6 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
         </div>
       )}
 
-      {/* Audit Modal Render */}
       <AuditDetailsModal
         isOpen={isModalOpen}
         onClose={() => {

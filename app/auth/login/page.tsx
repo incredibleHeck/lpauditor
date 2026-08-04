@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { auth } from "@/lib/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { BookOpen, Mail, Lock, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -19,17 +20,11 @@ export default function LoginPage() {
     setErrorMsg("");
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
+      await signInWithEmailAndPassword(auth, email, password);
       router.push("/");
       router.refresh();
-    } catch (err: any) {
-      setErrorMsg(err.message || "Invalid email or password.");
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : "Invalid email or password.");
     } finally {
       setIsLoading(false);
     }
@@ -131,7 +126,7 @@ export default function LoginPage() {
 
           <div className="text-center pt-4 border-t border-zinc-800/80">
             <p className="text-sm text-zinc-500">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link href="/auth/signup" className="text-amber-500 hover:text-amber-400 font-semibold transition-all">
                 Create one now
               </Link>

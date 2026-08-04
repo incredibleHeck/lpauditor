@@ -2,10 +2,22 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
 import LessonPlanDropzone from "./LessonPlanDropzone";
 import SubmissionsDashboard from "./SubmissionsDashboard";
 import { BookOpen, LogOut, Shield } from "lucide-react";
+
+interface Audit {
+  id: string;
+  submission_id: string;
+  score: number | null;
+  lessons_detected: number | null;
+  strengths: string[];
+  flags: string[];
+  raw_response: Record<string, unknown>;
+  created_at: string;
+}
 
 interface Submission {
   id: string;
@@ -16,7 +28,7 @@ interface Submission {
   grade_level: string;
   status: string | null;
   created_at: string;
-  ai_audits: unknown;
+  ai_audits: Audit[] | Audit | null;
 }
 
 interface DashboardPageContentProps {
@@ -38,12 +50,11 @@ export default function DashboardPageContent({
   const router = useRouter();
 
   const handleUploadSuccess = () => {
-    // Increment trigger to force dashboard refresh
     setRefreshTrigger((prev) => prev + 1);
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut(auth);
     router.push("/auth/login");
     router.refresh();
   };
@@ -56,7 +67,7 @@ export default function DashboardPageContent({
     <main className="min-h-screen bg-zinc-50 text-zinc-900 font-sans p-6 md:p-12">
       <div className="max-w-5xl mx-auto space-y-8">
         
-        {/* Sleek Enterprise Header */}
+        {/* Enterprise Header */}
         <div className="flex items-center justify-between border-b border-zinc-200 pb-6">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-600">
@@ -98,7 +109,7 @@ export default function DashboardPageContent({
               </p>
             </div>
             
-            {/* Injecting our Dropzone */}
+            {/* Dropzone */}
             <LessonPlanDropzone onUploadSuccess={handleUploadSuccess} />
           </div>
 
@@ -135,7 +146,7 @@ export default function DashboardPageContent({
         </div>
 
         <footer className="text-center pt-8 border-t border-zinc-100">
-          <p className="text-xs text-zinc-400">© 2026 HecTech Ltd. Powered by Gemini & Supabase.</p>
+          <p className="text-xs text-zinc-400">© 2026 HecTech Ltd. Powered by Gemini & Firebase.</p>
         </footer>
       </div>
     </main>

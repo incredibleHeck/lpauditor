@@ -2,7 +2,9 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { auth, db } from "@/lib/firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 import { BookOpen, Mail, Lock, User, Briefcase, ArrowRight, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -11,7 +13,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState("TEACHER");
-  const [department, setDepartment] = useState("Science");
+  const [department, setDepartment] = useState("Primary Science");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -24,34 +26,27 @@ export default function SignupPage() {
     setSuccessMsg("");
 
     try {
-      // 1. Sign up user in Supabase Auth
-      const { data, error: signupError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+      // 1. Create User in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-      if (signupError) throw signupError;
-      if (!data.user) throw new Error("Registration failed. No user object returned.");
-
-      // 2. Insert corresponding record into the public profiles table
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: data.user.id,
+      // 2. Save User Profile in Cloud Firestore
+      await setDoc(doc(db, "profiles", user.uid), {
+        id: user.uid,
         full_name: fullName,
         role: role,
         department: department,
+        created_at: new Date().toISOString()
       });
 
-      if (profileError) throw profileError;
-
-      setSuccessMsg("Account created successfully! Check your inbox to confirm your email or sign in.");
+      setSuccessMsg("Account created successfully! Redirecting to login...");
       
-      // Auto redirect to login after 3 seconds
       setTimeout(() => {
         router.push("/auth/login");
-      }, 3000);
+      }, 2000);
 
-    } catch (err: any) {
-      setErrorMsg(err.message || "Signup failed. Please try again.");
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : "Signup failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -194,7 +189,7 @@ export default function SignupPage() {
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
                   className="block w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/80 transition-all text-sm"
-                  placeholder="Science"
+                  placeholder="Primary Science"
                 />
               </div>
             </div>

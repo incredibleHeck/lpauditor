@@ -1,58 +1,24 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/server";
-import { getUserSubmissions, getDepartmentSubmissions } from "@/app/actions/submissions";
+import { getUserSubmissions } from "@/app/actions/submissions";
 import DashboardPageContent from "@/components/DashboardPageContent";
-import HODDashboard from "@/components/HODDashboard";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const supabase = await createClient();
-  
-  // 1. Authenticate user
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
-    redirect("/auth/login");
-  }
-
-  // 2. Fetch User Profile
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, role, department")
-    .eq("id", user.id)
-    .single();
-
-  // Handle fallback profile if user has auth account but no public profile record yet
-  const normalizedProfile = profile || {
-    full_name: user.email?.split("@")[0] || "Teacher Account",
-    role: "TEACHER",
-    department: "Science"
-  };
-
-  if (normalizedProfile.role === "HOD") {
-    // Fetch HOD Department Submissions
-    const hodRes = await getDepartmentSubmissions(normalizedProfile.department);
-    const departmentSubmissions = hodRes.data || [];
-    return (
-      <div className="max-w-6xl mx-auto p-6 md:p-12">
-        <HODDashboard 
-          initialSubmissions={departmentSubmissions as any}
-          department={normalizedProfile.department}
-        />
-      </div>
-    );
-  }
-
-  // 3. Fetch User Submissions (Teacher View)
-  const submissionsRes = await getUserSubmissions(user.id);
+  // Fetch initial empty or placeholder submissions for SSR hydration
+  const teacherId = ""; // Will be updated on client via Firebase Auth listener
+  const submissionsRes = await getUserSubmissions(teacherId);
   const initialSubmissions = submissionsRes.data || [];
 
   return (
     <DashboardPageContent
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       initialSubmissions={initialSubmissions as any}
-      teacherId={user.id}
-      profile={normalizedProfile}
+      teacherId={teacherId}
+      profile={{
+        full_name: "Teacher Portal",
+        role: "TEACHER",
+        department: "Primary Science"
+      }}
     />
   );
 }

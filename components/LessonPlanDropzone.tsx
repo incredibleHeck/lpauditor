@@ -3,7 +3,8 @@
 import { useCallback, useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { UploadCloud, FileText, CheckCircle, Loader2, AlertCircle, WifiOff } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { storage, auth } from "@/lib/firebase";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { submitLessonPlan } from "@/app/actions/submissions";
 import { toast } from "sonner";
 
@@ -67,34 +68,34 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
           if (items.length === 0) return;
 
           console.log(`Found ${items.length} offline submissions to sync...`);
+          const user = auth.currentUser;
+          const teacherId = user ? user.uid : "offline_user";
           
           for (const item of items) {
             try {
-              // Upload to Supabase Storage
               const fileExt = item.fileName.split('.').pop();
               const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
-              const filePath = `uploads/${fileName}`;
+              const filePath = `lesson-plans/${teacherId}/${fileName}`;
+              const storageRef = ref(storage, filePath);
 
-              const { data: storageData, error: storageError } = await supabase.storage
-                .from('lesson-plans')
-                .upload(filePath, item.file, {
-                  cacheControl: '3600',
-                  upsert: false
-                });
+              await new Promise<void>((resolve, reject) => {
+                const uploadTask = uploadBytesResumable(storageRef, item.file);
+                uploadTask.on('state_changed', null, reject, () => resolve());
+              });
 
-              if (storageError) throw storageError;
+              const fileUrl = await getDownloadURL(storageRef);
 
-              // Insert to DB & Trigger Inngest
               const { success, error: actionError } = await submitLessonPlan({
-                fileUrl: storageData.path,
+                fileUrl,
+                filePath,
                 subject: item.subject,
                 weekName: item.weekName,
                 gradeLevel: item.gradeLevel || "Grade 1",
+                teacherId,
               });
 
               if (!success) throw new Error(actionError);
 
-              // Delete synced item from IndexedDB
               const deleteTx = db.transaction("submissions", "readwrite");
               deleteTx.objectStore("submissions").delete(item.id);
             } catch (err: unknown) {
@@ -103,7 +104,6 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
             }
           }
 
-          // Trigger refresh on parent once sync completes
           if (onUploadSuccess) onUploadSuccess();
           toast.success("Offline submissions synced successfully!");
         };
@@ -113,7 +113,7 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
     };
 
     window.addEventListener("online", syncOfflineSubmissions);
-    syncOfflineSubmissions(); // Run check immediately on mount if online
+    syncOfflineSubmissions();
 
     return () => {
       window.removeEventListener("online", syncOfflineSubmissions);
@@ -127,12 +127,10 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
     setFile(selectedFile);
     setErrorMessage("");
 
-    // Offline mode support
     if (!navigator.onLine) {
       setUploadState("offline");
       try {
         await storeOfflineSubmission(selectedFile, subject, weekName, gradeLevel);
-        console.log("Offline mode: submission buffered in IndexedDB.");
         toast.info("You're offline. Lesson plan queued for upload.");
       } catch (error: unknown) {
         setUploadState("error");
@@ -144,42 +142,45 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
     setUploadState("uploading");
 
     try {
-      // 1. Sanitize the filename to prevent URL errors
+      const user = auth.currentUser;
+      const teacherId = user ? user.uid : "anonymous_teacher";
+
       const fileExt = selectedFile.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
-      const filePath = `uploads/${fileName}`;
+      const filePath = `lesson-plans/${teacherId}/${fileName}`;
+      const storageRef = ref(storage, filePath);
 
-      // 2. Direct Storage Upload to Supabase
-      const { data: storageData, error: storageError } = await supabase.storage
-        .from('lesson-plans')
-        .upload(filePath, selectedFile, {
-          cacheControl: '3600',
-          upsert: false
-        });
+      // Upload to Firebase Cloud Storage
+      await new Promise<void>((resolve, reject) => {
+        const uploadTask = uploadBytesResumable(storageRef, selectedFile);
+        uploadTask.on(
+          "state_changed",
+          null,
+          (err) => reject(err),
+          () => resolve()
+        );
+      });
 
-      if (storageError) throw storageError;
+      const fileUrl = await getDownloadURL(storageRef);
 
-      // 3. Database Logging & Inngest Trigger
+      // Database Logging & Inngest Trigger
       const { success, error: actionError } = await submitLessonPlan({
-        fileUrl: storageData.path,
-        subject: subject, 
-        weekName: weekName,
-        gradeLevel: gradeLevel,
+        fileUrl,
+        filePath,
+        subject, 
+        weekName,
+        gradeLevel,
+        teacherId,
       });
 
       if (!success) throw new Error(actionError);
 
-      console.log("File uploaded and submission logged successfully.");
       setUploadState("success");
-      
-      // Notify parent to refresh the submissions list
-      if (onUploadSuccess) {
-        onUploadSuccess();
-      }
+      if (onUploadSuccess) onUploadSuccess();
 
     } catch (error: unknown) {
       const err = error instanceof Error ? error : new Error("Unknown error");
-      console.error("Process failed:", err.message);
+      console.error("Upload failed:", err.message);
       setUploadState("error");
       setErrorMessage(err.message || "Failed to process lesson plan. Please try again.");
     }

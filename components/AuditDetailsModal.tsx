@@ -1,16 +1,17 @@
 "use client";
 
-import React from "react";
-import { X, CheckCircle, AlertTriangle, Info, BookOpen } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { X, CheckCircle, AlertTriangle, Info, BookOpen, Sparkles, Send, Loader2 } from "lucide-react";
+import { chatWithAuditor } from "@/app/actions/submissions";
 
 interface Audit {
   id: string;
   submission_id: string;
   score: number | null;
   lessons_detected: number | null;
-  strengths: any; // string[] stored in JSONB
-  flags: any; // string[] stored in JSONB
-  raw_response: any; // Full JSON including summary
+  strengths: string[]; // string[] stored in JSONB
+  flags: string[]; // string[] stored in JSONB
+  raw_response: Record<string, unknown>; // Full JSON including summary
   created_at: string;
 }
 
@@ -22,7 +23,77 @@ interface AuditDetailsModalProps {
 }
 
 export default function AuditDetailsModal({ isOpen, onClose, audit, fileName }: AuditDetailsModalProps) {
+  const [messages, setMessages] = useState<{ role: "user" | "model"; text: string }[]>([]);
+  const [inputValue, setInputValue] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+  
+  // Reset chat when modal is opened for a different audit
+  const [prevAuditId, setPrevAuditId] = useState<string | null>(null);
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isTyping]);
+
   if (!isOpen || !audit) return null;
+
+  if (audit.id !== prevAuditId) {
+    setPrevAuditId(audit.id);
+    setMessages([]);
+    setInputValue("");
+    setChatError(null);
+    setIsTyping(false);
+  }
+
+  const handleSendMessage = async (textToSend: string) => {
+    if (!textToSend.trim() || isTyping) return;
+    setChatError(null);
+    const newMsg = { role: "user" as const, text: textToSend };
+    setMessages((prev) => [...prev, newMsg]);
+    setInputValue("");
+    setIsTyping(true);
+
+    try {
+      const res = await chatWithAuditor(audit.submission_id, messages, textToSend);
+      if (res.success && res.reply) {
+        setMessages((prev) => [...prev, { role: "model", text: res.reply }]);
+      } else {
+        setChatError(res.error || "Failed to generate reply. Please try again.");
+      }
+    } catch (err) {
+      setChatError(err instanceof Error ? err.message : "An unexpected error occurred.");
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const renderMessageText = (text: string) => {
+    return text.split("\n").map((line, idx) => {
+      let content: React.ReactNode = line;
+      const isBullet = line.startsWith("* ") || line.startsWith("- ");
+      const cleanLine = isBullet ? line.substring(2) : line;
+
+      const boldParts = cleanLine.split(/\*\*(.*?)\*\*/g);
+      if (boldParts.length > 1) {
+        content = boldParts.map((part, pIdx) => {
+          return pIdx % 2 === 1 ? <strong key={pIdx} className="font-extrabold text-zinc-950">{part}</strong> : part;
+        });
+      }
+
+      if (isBullet) {
+        return (
+          <div key={idx} className="flex gap-1.5 ml-2 my-0.5">
+            <span className="text-amber-500 font-bold">•</span>
+            <span>{content}</span>
+          </div>
+        );
+      }
+
+      return <p key={idx} className="my-0.5">{content}</p>;
+    });
+  };
 
   const score = audit.score || 0;
   const lessons = audit.lessons_detected || 0;
@@ -30,9 +101,9 @@ export default function AuditDetailsModal({ isOpen, onClose, audit, fileName }: 
   const flags: string[] = Array.isArray(audit.flags) ? audit.flags : [];
   
   // Extract summary from raw_response or default to a generic text
-  const summary = (audit.raw_response as any)?.summary || 
-                  (typeof audit.raw_response === "object" && audit.raw_response !== null ? (audit.raw_response as any).summary : "") || 
-                  "Evaluation complete. Feedback summary generated successfully.";
+  const summary = String(audit.raw_response?.summary || 
+                  (typeof audit.raw_response === "object" && audit.raw_response !== null ? audit.raw_response.summary : "") || 
+                  "Evaluation complete. Feedback summary generated successfully.");
 
   // Score color classes
   let scoreBg = "bg-red-500/10 border-red-500/20 text-red-500";
@@ -190,6 +261,106 @@ export default function AuditDetailsModal({ isOpen, onClose, audit, fileName }: 
               )}
             </div>
 
+          </div>
+
+          {/* Chat Section */}
+          <div className="border-t border-zinc-100 pt-6 mt-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-amber-500/10 rounded-lg text-amber-600">
+                <Sparkles size={16} />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-zinc-900">Pedagogical Chat Assistant</h4>
+                <p className="text-xs text-zinc-500">Ask how to improve activities, fix flags, or differentiate instruction</p>
+              </div>
+            </div>
+
+            {/* Message Pane */}
+            <div className="flex flex-col gap-3 min-h-[120px] max-h-[260px] overflow-y-auto border border-zinc-200 rounded-xl p-4 bg-zinc-50/30">
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center text-center h-full py-4 space-y-3">
+                  <p className="text-xs text-zinc-400 font-medium max-w-[280px]">
+                    No messages yet. Select a quick action below or type a message to start improving your lesson plan.
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-2 max-w-[420px]">
+                    <button
+                      onClick={() => handleSendMessage("How can I resolve the compliance flags?")}
+                      className="px-2.5 py-1.5 bg-white hover:bg-zinc-100 text-zinc-700 hover:text-zinc-950 text-xs font-semibold rounded-lg border border-zinc-200 transition-all cursor-pointer shadow-sm"
+                    >
+                      💡 How do I fix the flags?
+                    </button>
+                    <button
+                      onClick={() => handleSendMessage("Draft a collaborative group activity for this plan.")}
+                      className="px-2.5 py-1.5 bg-white hover:bg-zinc-100 text-zinc-700 hover:text-zinc-950 text-xs font-semibold rounded-lg border border-zinc-200 transition-all cursor-pointer shadow-sm"
+                    >
+                      🤝 Create a group activity
+                    </button>
+                    <button
+                      onClick={() => handleSendMessage("Suggest differentiation strategies for lower-performing students.")}
+                      className="px-2.5 py-1.5 bg-white hover:bg-zinc-100 text-zinc-700 hover:text-zinc-950 text-xs font-semibold rounded-lg border border-zinc-200 transition-all cursor-pointer shadow-sm"
+                    >
+                      📈 Differentiate instruction
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2.5">
+                  {messages.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex flex-col max-w-[85%] rounded-2xl p-3 text-sm shadow-sm ${
+                        msg.role === "user"
+                          ? "bg-amber-600 text-white font-medium self-end rounded-tr-none"
+                          : "bg-white border border-zinc-200 text-zinc-800 self-start rounded-tl-none leading-relaxed"
+                      }`}
+                    >
+                      {msg.role === "user" ? (
+                        <p>{msg.text}</p>
+                      ) : (
+                        <div className="space-y-1">{renderMessageText(msg.text)}</div>
+                      )}
+                    </div>
+                  ))}
+                  {isTyping && (
+                    <div className="bg-zinc-100 border border-zinc-200/60 rounded-2xl rounded-tl-none p-3 self-start max-w-[85%] text-zinc-500 flex items-center gap-2 text-xs font-medium animate-pulse shadow-sm">
+                      <Loader2 className="animate-spin text-amber-600" size={14} />
+                      Auditor is thinking...
+                    </div>
+                  )}
+                  {chatError && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 rounded-lg p-2.5 text-xs font-medium self-center max-w-[90%] text-center">
+                      ⚠️ {chatError}
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
+            </div>
+
+            {/* Input Row */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendMessage(inputValue);
+              }}
+              className="flex gap-2"
+            >
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Ask about improving this plan..."
+                disabled={isTyping}
+                className="flex-1 px-3.5 py-2 border border-zinc-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none text-sm font-medium rounded-xl disabled:bg-zinc-50 disabled:text-zinc-400"
+              />
+              <button
+                type="submit"
+                disabled={!inputValue.trim() || isTyping}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white disabled:bg-zinc-100 disabled:text-zinc-400 disabled:border-zinc-200 border border-transparent font-bold text-xs rounded-xl shadow-sm flex items-center gap-1.5 transition-all cursor-pointer disabled:cursor-not-allowed"
+              >
+                <Send size={12} /> Send
+              </button>
+            </form>
           </div>
 
         </div>

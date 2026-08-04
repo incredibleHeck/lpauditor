@@ -63,3 +63,45 @@ CREATE POLICY "Teachers can view own audits" ON ai_audits
       AND submissions.teacher_id = auth.uid()
     )
   );
+
+-- 5. HOD Policies
+CREATE POLICY "HODs can view department submissions" ON submissions
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role = 'HOD'
+      AND profiles.department = submissions.subject
+    )
+  );
+
+CREATE POLICY "HODs can view department audits" ON ai_audits
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM submissions
+      JOIN profiles ON profiles.id = auth.uid()
+      WHERE submissions.id = ai_audits.submission_id
+      AND profiles.role = 'HOD'
+      AND profiles.department = submissions.subject
+    )
+  );
+
+-- 6. Auth Trigger for automatic profile creation
+-- Note: SECURITY DEFINER runs with database owner privileges to write into public.profiles
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.profiles (id, full_name, role, department)
+  VALUES (
+    new.id,
+    COALESCE(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
+    COALESCE(new.raw_user_meta_data->>'role', 'TEACHER'),
+    COALESCE(new.raw_user_meta_data->>'department', 'Science')
+  );
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();

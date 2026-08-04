@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getSubmissionStatus, getUserSubmissions } from "@/app/actions/submissions";
+import { getUserSubmissions } from "@/app/actions/submissions";
 import { FileText, Loader2, CheckCircle, AlertTriangle, Clock, Calendar } from "lucide-react";
 import AuditDetailsModal from "./AuditDetailsModal";
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/firebase";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 
 interface Audit {
   id: string;
@@ -32,7 +33,7 @@ interface Submission {
 interface SubmissionsDashboardProps {
   initialSubmissions: Submission[];
   teacherId: string;
-  refreshTrigger: number; // Increment to force a full reload
+  refreshTrigger: number;
 }
 
 export default function SubmissionsDashboard({ initialSubmissions, teacherId, refreshTrigger }: SubmissionsDashboardProps) {
@@ -42,59 +43,42 @@ export default function SubmissionsDashboard({ initialSubmissions, teacherId, re
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [prevInitialSubmissions, setPrevInitialSubmissions] = useState(initialSubmissions);
 
-  // Adjust state during render when props change (avoids useEffect cascading renders)
   if (initialSubmissions !== prevInitialSubmissions) {
     setPrevInitialSubmissions(initialSubmissions);
     setSubmissions(initialSubmissions);
   }
 
-  // Load submissions whenever trigger changes
+  const reloadSubmissions = async () => {
+    if (!teacherId) return;
+    const res = await getUserSubmissions(teacherId);
+    if (res.success && res.data) {
+      setSubmissions(res.data as Submission[]);
+    }
+  };
+
   useEffect(() => {
     if (refreshTrigger > 0) {
-      const reload = async () => {
-        const res = await getUserSubmissions(teacherId);
-        if (res.success && res.data) {
-          // Normalize ai_audits
-          setSubmissions(res.data as Submission[]);
-        }
-      };
-      reload();
+      reloadSubmissions();
     }
   }, [refreshTrigger, teacherId]);
 
-  // Realtime Supabase Subscription for Submissions
+  // Realtime Cloud Firestore listener
   useEffect(() => {
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'submissions',
-          filter: `teacher_id=eq.${teacherId}`
-        },
-        async (payload) => {
-          console.log("Realtime update received:", payload);
-          // If a status changes, we fetch the complete new submission state including its ai_audits
-          const statusRes = await getSubmissionStatus(payload.new.id);
-          if (statusRes.success && statusRes.data) {
-            const freshSub = statusRes.data as Submission;
-            setSubmissions((prev) => 
-              prev.map((sub) => (sub.id === freshSub.id ? freshSub : sub))
-            );
-          }
-        }
-      )
-      .subscribe();
+    if (!teacherId) return;
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const q = query(
+      collection(db, "submissions"),
+      where("teacher_id", "==", teacherId)
+    );
+
+    const unsubscribe = onSnapshot(q, async () => {
+      await reloadSubmissions();
+    });
+
+    return () => unsubscribe();
   }, [teacherId]);
 
   const handleViewAudit = (sub: Submission) => {
-    // Normalise ai_audits from array to single object if needed
     const rawAudit = sub.ai_audits;
     let auditObj: Audit | null = null;
     
@@ -115,7 +99,6 @@ export default function SubmissionsDashboard({ initialSubmissions, teacherId, re
     try {
       const parts = url.split("/");
       const rawName = parts[parts.length - 1];
-      // Strip off the random token prefix if generated
       const cleanParts = rawName.split("_");
       if (cleanParts.length > 1) {
         return cleanParts.slice(1).join("_");
@@ -181,14 +164,12 @@ export default function SubmissionsDashboard({ initialSubmissions, teacherId, re
                   const isCompleted = sub.status === "COMPLETED";
                   const isFailed = sub.status === "FAILED";
 
-                  // Extract audit score if complete
                   const rawAudit = sub.ai_audits;
                   const audit = Array.isArray(rawAudit) ? rawAudit[0] : rawAudit;
                   const score = audit?.score;
 
                   return (
                     <tr key={sub.id} className="hover:bg-zinc-50/50 transition-colors">
-                      {/* Filename & date */}
                       <td className="px-6 py-4.5">
                         <div className="flex items-center gap-3">
                           <div className="p-2 bg-amber-50 rounded-lg text-amber-600 border border-amber-100 shrink-0">
@@ -205,12 +186,10 @@ export default function SubmissionsDashboard({ initialSubmissions, teacherId, re
                         </div>
                       </td>
 
-                      {/* Subject */}
                       <td className="px-6 py-4.5 align-middle">
                         <span className="text-zinc-600">{sub.subject}</span>
                       </td>
 
-                      {/* Week & Grade */}
                       <td className="px-6 py-4.5 align-middle">
                         <div className="space-y-0.5">
                           <p className="text-zinc-700 font-semibold">{sub.week_name}</p>
@@ -218,7 +197,6 @@ export default function SubmissionsDashboard({ initialSubmissions, teacherId, re
                         </div>
                       </td>
 
-                      {/* Status badge */}
                       <td className="px-6 py-4.5 align-middle">
                         {isPending && (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-700 text-xs font-bold rounded-lg">
@@ -242,7 +220,6 @@ export default function SubmissionsDashboard({ initialSubmissions, teacherId, re
                         )}
                       </td>
 
-                      {/* Compliance score metric */}
                       <td className="px-6 py-4.5 align-middle">
                         {isCompleted && score !== undefined && score !== null ? (
                           <div className="flex items-center gap-2">
@@ -267,7 +244,6 @@ export default function SubmissionsDashboard({ initialSubmissions, teacherId, re
                         )}
                       </td>
 
-                      {/* Row Action button */}
                       <td className="px-6 py-4.5 align-middle text-right">
                         {isCompleted && audit ? (
                           <button
@@ -294,7 +270,6 @@ export default function SubmissionsDashboard({ initialSubmissions, teacherId, re
         </div>
       )}
 
-      {/* Audit Modal Render */}
       <AuditDetailsModal
         isOpen={isModalOpen}
         onClose={() => {

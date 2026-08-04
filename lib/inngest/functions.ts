@@ -1,5 +1,5 @@
 import { inngest } from "./client";
-import { supabaseAdmin } from "../supabase-admin";
+import { adminDb, adminStorage } from "../firebase-admin";
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { GoogleAIFileManager } from "@google/generative-ai/server";
 import { CAMBRIDGE_RUBRIC_PROMPT, CAMBRIDGE_SUBJECT_GUIDES } from "../rubric";
@@ -8,13 +8,12 @@ import path from "path";
 import os from "os";
 
 /**
- * Lead AI Engineer: Phase 4 - Gemini 3.5 Flash Inference Worker
+ * Pedagogical Audit Worker
  * 
- * This worker implements the 6-step atomic pipeline for pedagogical auditing.
- * It leverages Gemini 3.5 Flash for multimodal document analysis.
+ * Uses Gemini 3.6 Flash for multimodal document analysis with Google Firebase backend.
  */
 
-// Initialize Gemini Clients
+// Initialize Gemini Clients (using Paid API key for Gemini 3.6 Flash)
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY!);
 
@@ -25,50 +24,33 @@ export const processLessonPlanAudit = inngest.createFunction(
     triggers: [{ event: "lesson_plan.uploaded" }] 
   },
   async ({ event, step }) => {
-    const { submissionId, fileUrl, subject, gradeLevel } = event.data;
+    const { submissionId, fileUrl, filePath, subject, gradeLevel } = event.data;
 
-    // Step 0: Mark as PROCESSING in Database
+    // Step 0: Mark as PROCESSING in Firestore
     await step.run("update-status-processing", async () => {
-      const { error } = await supabaseAdmin
-        .from('submissions')
-        .update({ status: 'PROCESSING' })
-        .eq('id', submissionId);
-      
-      if (error) throw new Error(`Failed to update status to PROCESSING: ${error.message}`);
+      await adminDb.collection("submissions").doc(submissionId).update({
+        status: "PROCESSING"
+      });
     });
 
-    // Combined Step A & B: Download file and upload to Gemini File API in one execution step
+    // Step A & B: Download file from Firebase Storage and upload to Gemini File API
     const geminiFile = await step.run("retrieve-and-upload-to-gemini", async () => {
-      const { data, error } = await supabaseAdmin.storage
-        .from('lesson-plans')
-        .download(fileUrl);
-
-      if (error) throw new Error(`Failed to download file from Supabase: ${error.message}`);
-
-      const fileName = `${submissionId}_${path.basename(fileUrl)}`;
+      const storagePath = filePath || fileUrl;
+      const fileName = `${submissionId}_${path.basename(storagePath)}`;
       const tempFilePath = path.join(os.tmpdir(), fileName);
-      
+
       try {
-        // Use Node streams to pipe the Blob data without exhausting memory
-        const readableWebStream = data.stream();
-        const writeStream = fs.createWriteStream(tempFilePath);
+        const bucket = adminStorage.bucket();
+        const file = bucket.file(storagePath);
         
-        // Convert Web Stream to Async Iterable to pipe to Node WriteStream
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        for await (const chunk of readableWebStream as any) {
-          if (!writeStream.write(chunk)) {
-            await new Promise((resolve) => writeStream.once('drain', resolve));
-          }
-        }
-        writeStream.end();
-        
-        await new Promise((resolve, reject) => {
-          writeStream.on("finish", resolve);
-          writeStream.on("error", reject);
-        });
+        await file.download({ destination: tempFilePath });
+
+        const mimeType = storagePath.endsWith('.pdf') 
+          ? 'application/pdf' 
+          : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
         const uploadResult = await fileManager.uploadFile(tempFilePath, {
-          mimeType: fileUrl.endsWith('.pdf') ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          mimeType,
           displayName: `Lesson Plan ${submissionId}`,
         });
 
@@ -78,15 +60,15 @@ export const processLessonPlanAudit = inngest.createFunction(
           mimeType: uploadResult.file.mimeType
         };
       } finally {
-        // Clean up temp file immediately inside the same execution block
         if (fs.existsSync(tempFilePath)) {
           fs.unlinkSync(tempFilePath);
         }
       }
     });
 
+    let isSuccess = false;
     try {
-      // Step C: Deterministic Inference with Gemini 3.5 Flash
+      // Step C: Inference with Gemini 3.6 Flash
       const auditResult = await step.run("execute-audit", async () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const responseSchema: any = {
@@ -118,12 +100,11 @@ export const processLessonPlanAudit = inngest.createFunction(
           required: ["score", "lessons_detected", "strengths", "flags", "summary"]
         };
 
-        // Dynamically assemble system instruction with subject-specific yardstick
         const subjectGuide = CAMBRIDGE_SUBJECT_GUIDES[subject] || "";
         const combinedInstruction = `${CAMBRIDGE_RUBRIC_PROMPT}\n\n${subjectGuide}`;
 
         const model = genAI.getGenerativeModel({
-          model: "gemini-3.5-flash",
+          model: "gemini-3.6-flash",
           systemInstruction: combinedInstruction,
           generationConfig: {
             responseMimeType: "application/json",
@@ -131,7 +112,6 @@ export const processLessonPlanAudit = inngest.createFunction(
           },
         });
 
-        // Perform audit
         const result = await model.generateContent([
           {
             fileData: {
@@ -139,64 +119,58 @@ export const processLessonPlanAudit = inngest.createFunction(
               fileUri: geminiFile.uri
             }
           },
-          { text: `Please audit this uploaded lesson plan for ${gradeLevel || 'students'} ${subject || ''} against the standard rubrics. Ensure the content is strictly age-appropriate and pedagogically aligned for this specific grade and subject.` }
+          { text: `Please audit this uploaded lesson plan for ${gradeLevel || 'students'} ${subject || ''} against standard rubrics. Ensure content is strictly age-appropriate and pedagogically aligned.` }
         ]);
 
         const responseText = result.response.text();
         return JSON.parse(responseText);
       });
 
-      // Step E: Database Commit (Success Case)
+      // Step E: Save to Firestore
       await step.run("save-results", async () => {
-        // 1. Log AI Audit Results
-        const { error: auditError } = await supabaseAdmin
-          .from('ai_audits')
-          .insert({
-            submission_id: submissionId,
-            score: auditResult.score,
-            lessons_detected: auditResult.lessons_detected,
-            strengths: auditResult.strengths,
-            flags: auditResult.flags,
-            raw_response: auditResult // Stores the entire JSON including summary
-          });
-
-        if (auditError) throw new Error(`Failed to save AI audit results: ${auditError.message}`);
+        // 1. Write AI Audit Results
+        await adminDb.collection("ai_audits").add({
+          submission_id: submissionId,
+          score: auditResult.score,
+          lessons_detected: auditResult.lessons_detected,
+          strengths: auditResult.strengths,
+          flags: auditResult.flags,
+          raw_response: auditResult,
+          created_at: new Date()
+        });
 
         // 2. Mark Submission as COMPLETED
-        const { error: subError } = await supabaseAdmin
-          .from('submissions')
-          .update({ status: 'COMPLETED' })
-          .eq('id', submissionId);
-
-        if (subError) throw new Error(`Failed to finalize submission status: ${subError.message}`);
+        await adminDb.collection("submissions").doc(submissionId).update({
+          status: "COMPLETED"
+        });
       });
 
+      isSuccess = true;
       return { status: "success", submissionId };
 
     } catch (error: unknown) {
-      // Step F: Failure Handler (Graceful degradation)
+      // Step F: Failure Handler
       await step.run("handle-failure", async () => {
         console.error(`Audit failed for submission ${submissionId}:`, error);
         
-        await supabaseAdmin
-          .from('submissions')
-          .update({ status: 'FAILED' })
-          .eq('id', submissionId);
+        await adminDb.collection("submissions").doc(submissionId).update({
+          status: "FAILED"
+        });
       });
       
-      throw error; // Re-throw to allow Inngest retries if configured
+      throw error;
 
     } finally {
-      // Step D: Targeted Garbage Collection (Gemini File API)
-      await step.run("cleanup-gemini-file", async () => {
-        try {
-          console.log(`Cleaning up Gemini file ${geminiFile.name} for submission ${submissionId}...`);
-          await fileManager.deleteFile(geminiFile.name);
-          console.log(`Deleted orphaned Gemini file: ${geminiFile.name}`);
-        } catch (cleanupError) {
-          console.error(`Failed to cleanup Gemini file ${geminiFile.name}:`, cleanupError);
-        }
-      });
+      if (isSuccess && geminiFile) {
+        // Step D: Garbage Collection
+        await step.run("cleanup-gemini-file", async () => {
+          try {
+            await fileManager.deleteFile(geminiFile.name);
+          } catch (cleanupError) {
+            console.error(`Failed to cleanup Gemini file ${geminiFile.name}:`, cleanupError);
+          }
+        });
+      }
     }
   }
 );
