@@ -26,23 +26,46 @@ export default function SignupPage() {
     setSuccessMsg("");
 
     try {
+      const cleanEmail = email.trim().toLowerCase();
+      if (!cleanEmail.endsWith("@stadelaideschool.com")) {
+        setErrorMsg("Access Restricted: You must register with an official St. Adelaide International School email address (@stadelaideschool.com).");
+        setIsLoading(false);
+        return;
+      }
+
+      const adminEmails = [
+        "theodorahammond@stadelaideschool.com",
+        "hectoraryiku@stadelaideschool.com",
+        "abigailsackey@stadelaideschool.com"
+      ];
+      const assignedRole = adminEmails.includes(cleanEmail) ? "ADMIN" : role;
+      const assignedDept = cleanEmail === "theodorahammond@stadelaideschool.com" ? "Administration" : department;
+
       // 1. Create User in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
       const user = userCredential.user;
 
       // 2. Save User Profile in Cloud Firestore
       await setDoc(doc(db, "profiles", user.uid), {
         id: user.uid,
         full_name: fullName,
-        role: role,
-        department: department,
+        email: cleanEmail,
+        role: assignedRole,
+        department: assignedDept,
         created_at: new Date().toISOString()
       });
 
       setSuccessMsg("Account created successfully! Redirecting to login...");
       
+      const idToken = await userCredential.user.getIdToken();
+      await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+
       setTimeout(() => {
-        router.push("/auth/login");
+        router.push("/dashboard");
       }, 2000);
 
     } catch (err: unknown) {
@@ -73,7 +96,7 @@ export default function SignupPage() {
         <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 py-10 px-6 sm:px-10 rounded-2xl shadow-2xl space-y-6">
           <div>
             <h3 className="text-xl font-bold text-white">Create Account</h3>
-            <p className="text-sm text-zinc-400 mt-1">Register to start submitting lesson plans for compliance review.</p>
+            <p className="text-sm text-zinc-400 mt-1">Exclusively for St. Adelaide International School staff (@stadelaideschool.com).</p>
           </div>
 
           {errorMsg && (
@@ -114,7 +137,7 @@ export default function SignupPage() {
 
             <div className="space-y-1.5">
               <label htmlFor="email" className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-                Email Address
+                School Email (@stadelaideschool.com)
               </label>
               <div className="relative rounded-lg shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
@@ -128,7 +151,7 @@ export default function SignupPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-10 pr-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/80 transition-all text-sm"
-                  placeholder="hector@adelaide.edu"
+                  placeholder="name@stadelaideschool.com"
                 />
               </div>
             </div>

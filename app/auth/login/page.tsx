@@ -20,7 +20,29 @@ export default function LoginPage() {
     setErrorMsg("");
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const cleanEmail = email.trim().toLowerCase();
+      if (!cleanEmail.endsWith("@stadelaideschool.com")) {
+        setErrorMsg("Access Restricted: Only St. Adelaide International School accounts (@stadelaideschool.com) are permitted.");
+        setIsLoading(false);
+        return;
+      }
+
+      const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, password);
+      const userEmail = (userCredential.user.email || "").toLowerCase();
+
+      if (!userEmail.endsWith("@stadelaideschool.com")) {
+        await auth.signOut();
+        setErrorMsg("Access Restricted: Your email domain is not authorized for St. Adelaide International School.");
+        setIsLoading(false);
+        return;
+      }
+      const idToken = await userCredential.user.getIdToken();
+      await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+
       router.push("/");
       router.refresh();
     } catch (err: unknown) {
@@ -52,7 +74,7 @@ export default function LoginPage() {
         <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 py-10 px-6 sm:px-10 rounded-2xl shadow-2xl space-y-6">
           <div>
             <h3 className="text-xl font-bold text-white">Welcome Back</h3>
-            <p className="text-sm text-zinc-400 mt-1">Sign in to review and audit weekly lesson plans.</p>
+            <p className="text-sm text-zinc-400 mt-1">Sign in with your St. Adelaide School Google account.</p>
           </div>
 
           {errorMsg && (
@@ -65,7 +87,7 @@ export default function LoginPage() {
           <form className="space-y-5" onSubmit={handleLogin}>
             <div className="space-y-1.5">
               <label htmlFor="email" className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-                Email Address
+                School Email (@stadelaideschool.com)
               </label>
               <div className="relative rounded-lg shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
@@ -80,7 +102,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-10 pr-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/80 transition-all text-sm"
-                  placeholder="name@school.edu"
+                  placeholder="name@stadelaideschool.com"
                 />
               </div>
             </div>

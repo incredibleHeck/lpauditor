@@ -1,35 +1,25 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { getDepartmentSubmissions, getDepartmentAnalytics } from "@/app/actions/submissions";
-import { FileText, Loader2, CheckCircle, AlertTriangle, Clock, Calendar, Sparkles, Users, ShieldAlert, Award } from "lucide-react";
-import AuditDetailsModal from "./AuditDetailsModal";
-import { db } from "@/lib/firebase";
+import React, { useEffect, useState, useCallback } from "react";
+import { getDepartmentSubmissions } from "@/app/actions/submissions";
+import { getDepartmentAnalytics } from "@/app/actions/ai";
+import { getDefaultersReportAction, triggerTelegramDefaulterReportAction } from "@/app/actions/notifications";
+import { 
+  FileText, Loader2, CheckCircle, AlertTriangle, Clock, Calendar, Sparkles, 
+  Users, ShieldAlert, Award, Search, Filter, Check, RotateCcw, UserCheck,
+  Download, RefreshCw, Send, UserX, CalendarClock
+} from "lucide-react";
+import { db, auth } from "@/lib/firebase";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { toast } from "sonner";
+import { DefaulterReportData } from "@/lib/telegram";
+import DepartmentKPIs from "./hod/DepartmentKPIs";
+import DefaultersPanel from "./hod/DefaultersPanel";
+import AuditDetailsModal from "./AuditDetailsModal";
+import type { Audit, Submission } from "@/lib/types";
+import { getFileName, formatDate, getAuditFromSubmission } from "@/lib/format-utils";
+import { DEPARTMENTS, GRADE_LEVELS } from "@/lib/constants";
 
-interface Audit {
-  id: string;
-  submission_id: string;
-  score: number | null;
-  lessons_detected: number | null;
-  strengths: string[];
-  flags: string[];
-  raw_response: Record<string, unknown>;
-  created_at: string;
-}
-
-interface Submission {
-  id: string;
-  teacher_id: string;
-  file_url: string;
-  subject: string;
-  week_name: string;
-  grade_level: string;
-  status: string | null;
-  created_at: string;
-  ai_audits: Audit[] | Audit | null;
-  profiles?: { full_name: string; department: string };
-}
 
 interface HODDashboardProps {
   initialSubmissions: Submission[];
@@ -43,6 +33,15 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
   const [selectedAudit, setSelectedAudit] = useState<Audit | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [prevInitialSubmissions, setPrevInitialSubmissions] = useState(initialSubmissions);
+
+  const [selectedDepartment, setSelectedDepartment] = useState(
+    department === "Administration" || !department ? "All Departments" : department
+  );
+
+  // Search & Filtering States
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [gradeFilter, setGradeFilter] = useState("ALL");
 
   const [analytics, setAnalytics] = useState<{
     stats: {
@@ -58,39 +57,93 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
   } | null>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(true);
 
+  // Defaulters & Telegram Reporting States
+  const [defaulterReport, setDefaulterReport] = useState<DefaulterReportData | null>(null);
+  const [loadingDefaulters, setLoadingDefaulters] = useState(true);
+  const [dispatchingTelegram, setDispatchingTelegram] = useState(false);
+
+  const fetchDefaulters = useCallback(async (deptToUse = selectedDepartment) => {
+    setLoadingDefaulters(true);
+    const res = await getDefaultersReportAction(undefined, deptToUse);
+    if (res.success && res.data) {
+      setDefaulterReport(res.data);
+    }
+    setLoadingDefaulters(false);
+  }, [selectedDepartment]);
+
+  const handleSendTelegramAlert = async () => {
+    setDispatchingTelegram(true);
+    const res = await triggerTelegramDefaulterReportAction(undefined, selectedDepartment);
+    if (res.success) {
+      if (res.telegramResult?.success) {
+        toast.success("Telegram defaulters report successfully sent to administrators!");
+      } else {
+        toast.warning(
+          res.telegramResult?.error || 
+          "Defaulters report compiled, but Telegram message skipped (check TELEGRAM_BOT_TOKEN)."
+        );
+      }
+    } else {
+      toast.error(res.error || "Failed to dispatch Telegram report.");
+    }
+    setDispatchingTelegram(false);
+  };
+
+  const fetchAnalytics = useCallback(async (deptToUse = selectedDepartment) => {
+    setLoadingAnalytics(true);
+    const res = await getDepartmentAnalytics(deptToUse);
+    if (res.success && res.stats) {
+      setAnalytics({
+        stats: res.stats,
+        brief: res.brief || ""
+      });
+    }
+    setLoadingAnalytics(false);
+  }, [selectedDepartment]);
+
   useEffect(() => {
     let active = true;
-    const fetchAnalytics = async () => {
+    const runFetch = async () => {
       setLoadingAnalytics(true);
-      const res = await getDepartmentAnalytics(department);
+      setLoadingDefaulters(true);
+      const res = await getDepartmentAnalytics(selectedDepartment);
+      const defRes = await getDefaultersReportAction(undefined, selectedDepartment);
+      const subRes = await getDepartmentSubmissions(selectedDepartment);
+
       if (active && res.success && res.stats) {
         setAnalytics({
           stats: res.stats,
           brief: res.brief || ""
         });
       }
+      if (active && defRes.success && defRes.data) {
+        setDefaulterReport(defRes.data);
+      }
+      if (active && subRes.success && subRes.data) {
+        setSubmissions(subRes.data as Submission[]);
+      }
       if (active) {
         setLoadingAnalytics(false);
+        setLoadingDefaulters(false);
       }
     };
-    fetchAnalytics();
+    runFetch();
     return () => {
       active = false;
     };
-  }, [department, submissions]);
+  }, [selectedDepartment, refreshTrigger]);
 
-  if (initialSubmissions !== prevInitialSubmissions) {
-    setPrevInitialSubmissions(initialSubmissions);
+  useEffect(() => {
     setSubmissions(initialSubmissions);
-  }
+  }, [initialSubmissions]);
 
-  const reloadSubmissions = async () => {
+  const reloadSubmissions = useCallback(async () => {
     if (!department) return;
     const res = await getDepartmentSubmissions(department);
     if (res.success && res.data) {
       setSubmissions(res.data as Submission[]);
     }
-  };
+  }, [department]);
 
   useEffect(() => {
     if (refreshTrigger > 0) {
@@ -107,23 +160,63 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
       where("subject", "==", department)
     );
 
-    const unsubscribe = onSnapshot(q, async () => {
-      await reloadSubmissions();
+    let timer: NodeJS.Timeout;
+    const unsubscribe = onSnapshot(q, () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        reloadSubmissions();
+      }, 500);
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
   }, [department]);
 
-  const handleViewAudit = (sub: Submission) => {
-    const rawAudit = sub.ai_audits;
-    let auditObj: Audit | null = null;
-    
-    if (Array.isArray(rawAudit)) {
-      auditObj = rawAudit.length > 0 ? rawAudit[0] : null;
-    } else {
-      auditObj = rawAudit;
+  const exportToCSV = () => {
+    if (submissions.length === 0) {
+      toast.info("No submissions to export.");
+      return;
     }
 
+    const sanitizeCSVField = (val: string) => {
+      return `"${(val || "").replace(/[\r\n]+/g, " ").replace(/"/g, '""')}"`;
+    };
+
+    const headers = ["Teacher Name", "Subject", "Grade Level", "Week", "Audit Status", "HOD Decision", "Compliance Score %", "Submitted Date"];
+    const rows = filteredSubmissions.map((sub) => {
+      const audit = getAuditFromSubmission(sub);
+      const score = audit?.score !== undefined && audit?.score !== null ? `${audit.score}%` : "N/A";
+      const teacher = sub.profiles?.full_name || "Teacher";
+      const decision = sub.hod_decision || "Pending Review";
+      const created = formatDate(sub.created_at);
+
+      return [
+        sanitizeCSVField(teacher),
+        sanitizeCSVField(sub.subject),
+        sanitizeCSVField(sub.grade_level),
+        sanitizeCSVField(sub.week_name),
+        sanitizeCSVField(sub.status || ""),
+        sanitizeCSVField(decision),
+        sanitizeCSVField(score),
+        sanitizeCSVField(created)
+      ].join(",");
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${department.replace(/\s+/g, "_")}_Compliance_Report.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Department CSV compliance report downloaded!");
+  };
+
+  const handleViewAudit = (sub: Submission) => {
+    const auditObj = getAuditFromSubmission(sub);
     if (auditObj) {
       setSelectedSubmission(sub);
       setSelectedAudit(auditObj);
@@ -131,112 +224,87 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
     }
   };
 
-  const getFileName = (url: string) => {
-    try {
-      const parts = url.split("/");
-      const rawName = parts[parts.length - 1];
-      const cleanParts = rawName.split("_");
-      if (cleanParts.length > 1) {
-        return cleanParts.slice(1).join("_");
-      }
-      return rawName;
-    } catch {
-      return "Document.pdf";
-    }
-  };
 
-  const formatDate = (dateStr: string) => {
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-      });
-    } catch {
-      return "Recent";
-    }
-  };
+
+  // Filtered Submissions Logic
+  const filteredSubmissions = submissions.filter((sub) => {
+    const teacherName = sub.profiles?.full_name || "Teacher";
+    const filename = getFileName(sub.file_url);
+    const matchesSearch = 
+      teacherName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      filename.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      sub.week_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      sub.subject.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesGrade = gradeFilter === "ALL" || sub.grade_level === gradeFilter;
+
+    let matchesStatus = true;
+    if (statusFilter === "PENDING") matchesStatus = sub.status === "PENDING" || sub.status === "PROCESSING";
+    else if (statusFilter === "COMPLETED") matchesStatus = sub.status === "COMPLETED";
+    else if (statusFilter === "FAILED") matchesStatus = sub.status === "FAILED";
+    else if (statusFilter === "APPROVED") matchesStatus = sub.hod_decision === "APPROVED";
+    else if (statusFilter === "REVISION_REQUESTED") matchesStatus = sub.hod_decision === "REVISION_REQUESTED";
+    else if (statusFilter === "NEEDS_OBSERVATION") matchesStatus = sub.hod_decision === "NEEDS_OBSERVATION";
+
+    return matchesSearch && matchesGrade && matchesStatus;
+  });
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between border-b border-zinc-200 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-200 pb-4 gap-3">
         <div>
-          <h2 className="text-xl font-bold text-zinc-900">{department} Department Submissions</h2>
-          <p className="text-sm text-zinc-500 mt-0.5">Track and view compliance results for all teachers in your department.</p>
+          <h2 className="text-xl font-bold text-zinc-900">
+            {selectedDepartment === "All Departments" ? "School-Wide" : selectedDepartment} Compliance & Defaulters
+          </h2>
+          <p className="text-sm text-zinc-500 mt-0.5">
+            Track, audit, and review lesson plans and defaulters across St. Adelaide International School.
+          </p>
         </div>
-        <span className="px-2.5 py-1 bg-zinc-100 border border-zinc-200 text-zinc-800 text-xs font-bold rounded-lg uppercase tracking-wide">
-          {submissions.length} Total
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={selectedDepartment}
+            onChange={(e) => setSelectedDepartment(e.target.value)}
+            className="px-3 py-1.5 bg-white border border-zinc-300 hover:border-zinc-400 text-zinc-800 text-xs font-bold rounded-lg shadow-2xs outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+          >
+            <option value="All Departments">All Departments (School-Wide)</option>
+            {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+
+          <button
+            onClick={exportToCSV}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs rounded-lg shadow-xs transition-all cursor-pointer"
+          >
+            <Download size={14} /> Export CSV Report
+          </button>
+          <span className="px-2.5 py-1.5 bg-zinc-100 border border-zinc-200 text-zinc-800 text-xs font-bold rounded-lg uppercase tracking-wide">
+            {submissions.length} Total
+          </span>
+        </div>
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-sm flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Average Compliance</span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-3xl font-black text-zinc-900">
-                {loadingAnalytics ? "..." : `${analytics?.stats.averageScore || 0}%`}
-              </span>
-            </div>
-            <p className="text-[11px] text-zinc-500">Across all completed lesson plans</p>
-          </div>
-          <div className={`p-3 rounded-xl border shrink-0 ${
-            (analytics?.stats.averageScore || 0) >= 80 ? "bg-emerald-50 border-emerald-100 text-emerald-600" :
-            (analytics?.stats.averageScore || 0) >= 50 ? "bg-amber-50 border-amber-100 text-amber-600" :
-            "bg-red-50 border-red-100 text-red-600"
-          }`}>
-            <Award size={24} />
-          </div>
-        </div>
-
-        <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-sm flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Submission Status</span>
-            <div className="text-sm font-semibold text-zinc-700 flex flex-wrap gap-x-3 gap-y-1 mt-1">
-              <span className="text-green-600">{analytics?.stats.completedCount || 0} Audited</span>
-              <span className="text-amber-600">{analytics?.stats.pendingCount || 0} Pending</span>
-              {analytics?.stats.failedCount ? <span className="text-red-500">{analytics?.stats.failedCount} Failed</span> : null}
-            </div>
-            <p className="text-[11px] text-zinc-500 mt-0.5">Total: {analytics?.stats.totalCount || 0} uploads</p>
-          </div>
-          <div className="p-3 bg-zinc-50 border border-zinc-100 rounded-xl text-zinc-600 shrink-0">
-            <Users size={24} />
-          </div>
-        </div>
-
-        <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-sm flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Critical Reviews</span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-3xl font-black text-red-600">
-                {loadingAnalytics ? "..." : analytics?.stats.underperformingCount || 0}
-              </span>
-            </div>
-            <p className="text-[11px] text-zinc-500">Scored under 50% threshold</p>
-          </div>
-          <div className={`p-3 rounded-xl border shrink-0 ${
-            (analytics?.stats.underperformingCount || 0) > 0 ? "bg-red-50 border-red-100 text-red-600 animate-pulse" : "bg-zinc-50 border-zinc-100 text-zinc-400"
-          }`}>
-            <ShieldAlert size={24} />
-          </div>
-        </div>
-      </div>
+      <DepartmentKPIs stats={analytics?.stats} loading={loadingAnalytics} />
 
       {/* AI Weekly Briefing Panel */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-amber-500/5 via-amber-600/[0.02] to-transparent border border-amber-500/20 rounded-2xl p-6 shadow-sm space-y-4">
+      <div className="relative overflow-hidden bg-gradient-to-r from-amber-500/5 via-amber-600/[0.02] to-transparent border border-amber-500/20 rounded-2xl p-6 shadow-xs space-y-4">
         <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none" />
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-600">
-            <Sparkles size={18} />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-600">
+              <Sparkles size={18} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-zinc-900">Department AI Weekly Briefing</h3>
+              <p className="text-xs text-zinc-500">Gemini 3.6 Flash synthesis of compliance trends</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-sm font-bold text-zinc-900">Department AI Weekly Briefing</h3>
-            <p className="text-xs text-zinc-500">Gemini 3.6 Flash synthesis of compliance trends</p>
-          </div>
+          <button
+            onClick={() => fetchAnalytics()}
+            disabled={loadingAnalytics}
+            className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200 font-bold text-xs rounded-lg shadow-xs cursor-pointer transition-all disabled:opacity-50"
+          >
+            <RefreshCw size={13} className={loadingAnalytics ? "animate-spin" : ""} /> Refresh Briefing
+          </button>
         </div>
         
         {loadingAnalytics ? (
@@ -251,14 +319,66 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
         )}
       </div>
 
-      {submissions.length === 0 ? (
-        <div className="text-center py-12 border border-dashed border-zinc-200 bg-white rounded-xl shadow-sm">
+      {/* Submission Deadline & Telegram Defaulter Alerts Panel */}
+      <DefaultersPanel
+        report={defaulterReport}
+        loading={loadingDefaulters}
+        onRefresh={() => fetchDefaulters()}
+        onSendAlert={handleSendTelegramAlert}
+        isDispatching={dispatchingTelegram}
+      />
+
+      {/* Search & Filter Toolbar */}
+      <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="relative flex-1 w-full">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by teacher name, week, topic..."
+            className="w-full pl-9 pr-4 py-2 text-xs border border-zinc-200 rounded-lg outline-none focus:ring-1 focus:ring-amber-500 bg-zinc-50/50"
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto items-center">
+          <div className="flex items-center gap-1.5 text-xs text-zinc-500 font-bold">
+            <Filter size={14} /> Filter:
+          </div>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 text-xs font-semibold border border-zinc-200 rounded-lg bg-zinc-50/50 outline-none focus:ring-1 focus:ring-amber-500"
+          >
+            <option value="ALL">All Audit Statuses</option>
+            <option value="COMPLETED">Audited</option>
+            <option value="PENDING">Pending Queue</option>
+            <option value="APPROVED">Approved by HOD</option>
+            <option value="REVISION_REQUESTED">Revision Requested</option>
+            <option value="NEEDS_OBSERVATION">Peer Observation</option>
+            <option value="FAILED">Failed</option>
+          </select>
+
+          <select
+            value={gradeFilter}
+            onChange={(e) => setGradeFilter(e.target.value)}
+            className="px-3 py-2 text-xs font-semibold border border-zinc-200 rounded-lg bg-zinc-50/50 outline-none focus:ring-1 focus:ring-amber-500"
+          >
+            <option value="ALL">All Grades</option>
+            {GRADE_LEVELS.map((g) => <option key={g} value={g}>{g}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {filteredSubmissions.length === 0 ? (
+        <div className="text-center py-12 border border-dashed border-zinc-200 bg-white rounded-xl shadow-xs">
           <FileText className="mx-auto h-12 w-12 text-zinc-300 mb-3" />
-          <h3 className="text-sm font-bold text-zinc-700">No submissions yet</h3>
-          <p className="text-xs text-zinc-400 mt-1">Upload a lesson plan document above to initiate your first audit.</p>
+          <h3 className="text-sm font-bold text-zinc-700">No matching submissions found</h3>
+          <p className="text-xs text-zinc-400 mt-1">Try adjusting your search terms or filter selections.</p>
         </div>
       ) : (
-        <div className="bg-white border border-zinc-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white border border-zinc-200 rounded-xl shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-zinc-200 text-left">
               <thead className="bg-zinc-50/70 text-xs font-bold text-zinc-400 uppercase tracking-wider">
@@ -267,13 +387,14 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
                   <th className="px-6 py-4">Teacher</th>
                   <th className="px-6 py-4">Subject</th>
                   <th className="px-6 py-4">Week / Grade</th>
-                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Audit Status</th>
+                  <th className="px-6 py-4">HOD Decision</th>
                   <th className="px-6 py-4">Compliance</th>
                   <th className="px-6 py-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-200 text-sm font-medium text-zinc-700">
-                {submissions.map((sub) => {
+                {filteredSubmissions.map((sub) => {
                   const filename = getFileName(sub.file_url);
                   const isPending = sub.status === "PENDING";
                   const isProcessing = sub.status === "PROCESSING";
@@ -281,7 +402,7 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
                   const isFailed = sub.status === "FAILED";
 
                   const rawAudit = sub.ai_audits;
-                  const audit = Array.isArray(rawAudit) ? rawAudit[0] : rawAudit;
+                  const audit = getAuditFromSubmission(sub);
                   const score = audit?.score;
 
                   return (
@@ -291,7 +412,7 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
                           <div className="p-2 bg-amber-50 rounded-lg text-amber-600 border border-amber-100 shrink-0">
                             <FileText size={18} />
                           </div>
-                          <div className="max-w-[200px] sm:max-w-xs overflow-hidden">
+                          <div className="max-w-[180px] sm:max-w-xs overflow-hidden">
                             <p className="font-bold text-zinc-900 truncate" title={filename}>
                               {filename}
                             </p>
@@ -303,7 +424,7 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
                       </td>
 
                       <td className="px-6 py-4.5 align-middle">
-                        <span className="text-zinc-900 font-medium">{sub.profiles?.full_name || "Teacher"}</span>
+                        <span className="text-zinc-900 font-bold">{sub.profiles?.full_name || "Teacher"}</span>
                       </td>
 
                       <td className="px-6 py-4.5 align-middle">
@@ -341,6 +462,27 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
                       </td>
 
                       <td className="px-6 py-4.5 align-middle">
+                        {sub.hod_decision === "APPROVED" && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold rounded-lg">
+                            <Check size={13} /> Approved
+                          </span>
+                        )}
+                        {sub.hod_decision === "REVISION_REQUESTED" && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold rounded-lg">
+                            <RotateCcw size={13} /> Revision Needed
+                          </span>
+                        )}
+                        {sub.hod_decision === "NEEDS_OBSERVATION" && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold rounded-lg">
+                            <UserCheck size={13} /> Observation
+                          </span>
+                        )}
+                        {!sub.hod_decision && (
+                          <span className="text-xs text-zinc-400 italic">Pending HOD Review</span>
+                        )}
+                      </td>
+
+                      <td className="px-6 py-4.5 align-middle">
                         {isCompleted && score !== undefined && score !== null ? (
                           <div className="flex items-center gap-2">
                             <span className={`text-base font-extrabold ${
@@ -365,22 +507,25 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
                       </td>
 
                       <td className="px-6 py-4.5 align-middle text-right">
-                        {isCompleted && audit ? (
-                          <button
-                            onClick={() => handleViewAudit(sub)}
-                            className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs rounded-lg shadow-sm transition-all cursor-pointer"
-                          >
-                            Review Feedback
-                          </button>
-                        ) : (
-                          <button
-                            disabled
-                            className="px-3 py-1.5 bg-zinc-100 text-zinc-400 border border-zinc-200 font-bold text-xs rounded-lg cursor-not-allowed"
-                          >
-                            Feedback Locked
-                          </button>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {isCompleted && audit ? (
+                            <button
+                              onClick={() => handleViewAudit(sub)}
+                              className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs rounded-lg shadow-xs transition-all cursor-pointer"
+                            >
+                              Review & Audit
+                            </button>
+                          ) : (
+                            <button
+                              disabled
+                              className="px-3 py-1.5 bg-zinc-100 text-zinc-400 border border-zinc-200 font-bold text-xs rounded-lg cursor-not-allowed"
+                            >
+                              Feedback Locked
+                            </button>
+                          )}
+                        </div>
                       </td>
+
                     </tr>
                   );
                 })}
@@ -398,7 +543,10 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
           setSelectedAudit(null);
         }}
         audit={selectedAudit}
+        submission={selectedSubmission}
         fileName={selectedSubmission ? getFileName(selectedSubmission.file_url) : ""}
+        userRole="HOD"
+        onDecisionUpdated={() => reloadSubmissions()}
       />
     </div>
   );

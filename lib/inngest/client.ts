@@ -6,22 +6,19 @@ export type Events = {
     data: {
       submissionId: string;
       fileUrl: string;
+      filePath?: string;
       subject: string;
       weekName: string;
+      gradeLevel?: string;
+    };
+  };
+  "defaulters.check": {
+    data: {
+      weekName?: string;
+      triggeredBy?: string;
     };
   };
 };
 
 // Initialize the Inngest client
-export const inngest = new Inngest({ 
-  id: "lpauditor",
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  schemas: (s: any) => ({
-    "lesson_plan.uploaded": s.object({
-      submissionId: s.string(),
-      fileUrl: s.string(),
-      subject: s.string(),
-      weekName: s.string(),
-    }),
-  }),
-});
+export const inngest = new Inngest({ id: "lpauditor" });

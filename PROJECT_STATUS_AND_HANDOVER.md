@@ -32,7 +32,13 @@ The project has been migrated to the **Google Ecosystem** using **Firebase** (op
    - **Offline-First Upload Queue**: Integrates browser `IndexedDB` to queue lesson plans when network drops, automatically syncing with Firebase Cloud Storage when connectivity restores.
    - **Real-Time Dashboard Updates**: Firestore `onSnapshot` subscriptions keep teacher and HOD dashboards updated live as background audit statuses transition from `PENDING` -> `PROCESSING` -> `COMPLETED`.
 
-4. **Production Build & Type Health**
+4. **Automated Telegram Bot & Defaulter Management System**
+   - **Defaulter Engine (`lib/defaulters.ts`)**: Cross-references active teacher profiles against weekly submissions to detect non-submitting teachers.
+   - **Telegram API Bot Wrapper (`lib/telegram.ts`)**: Dispatches formatted markdown reports summarizing compliance rates, target deadlines, and department defaulter rosters directly to admin Telegram channels.
+   - **Inngest Cron Worker (`checkAndReportDefaulters`)**: Automated cron trigger (Fridays 17:00 UTC) and manual on-demand trigger event `defaulters.check`.
+   - **HOD & Admin Dashboard Tracking**: Real-time UI banner displaying submission deadline, compliance rates, defaulter list, and manual "Send Telegram Alert" dispatch button.
+
+5. **Production Build & Type Health**
    - `npx tsc --noEmit` checks pass with **0 TypeScript errors**.
    - `npm run build` compiles cleanly with Next.js Turbopack.
 

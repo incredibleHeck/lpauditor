@@ -1,11 +1,15 @@
 import { inngest } from "./client";
 import { adminDb, adminStorage } from "../firebase-admin";
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { SchemaType, ResponseSchema } from "@google/generative-ai";
 import { GoogleAIFileManager } from "@google/generative-ai/server";
 import { CAMBRIDGE_RUBRIC_PROMPT, CAMBRIDGE_SUBJECT_GUIDES } from "../rubric";
+import { getDefaultersReportForWeek } from "../defaulters";
+import { sendTelegramMessage, formatDefaultersTelegramMessage } from "../telegram";
+import { getGeminiClient } from "../gemini";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { auditResponseSchema } from "../schemas/auditSchema";
 
 /**
  * Pedagogical Audit Worker
@@ -13,9 +17,8 @@ import os from "os";
  * Uses Gemini 3.6 Flash for multimodal document analysis with Google Firebase backend.
  */
 
-// Initialize Gemini Clients (using Paid API key for Gemini 3.6 Flash)
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY!);
+// Initialize Gemini File Manager
+const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY || "");
 
 export const processLessonPlanAudit = inngest.createFunction(
   { 
@@ -36,7 +39,8 @@ export const processLessonPlanAudit = inngest.createFunction(
     // Step A & B: Download file from Firebase Storage and upload to Gemini File API
     const geminiFile = await step.run("retrieve-and-upload-to-gemini", async () => {
       const storagePath = filePath || fileUrl;
-      const fileName = `${submissionId}_${path.basename(storagePath)}`;
+      const cleanPath = storagePath.split('?')[0].toLowerCase();
+      const fileName = `${submissionId}_${path.basename(cleanPath)}`;
       const tempFilePath = path.join(os.tmpdir(), fileName);
 
       try {
@@ -45,7 +49,7 @@ export const processLessonPlanAudit = inngest.createFunction(
         
         await file.download({ destination: tempFilePath });
 
-        const mimeType = storagePath.endsWith('.pdf') 
+        const mimeType = cleanPath.endsWith('.pdf') 
           ? 'application/pdf' 
           : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
@@ -70,45 +74,16 @@ export const processLessonPlanAudit = inngest.createFunction(
     try {
       // Step C: Inference with Gemini 3.6 Flash
       const auditResult = await step.run("execute-audit", async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const responseSchema: any = {
-          type: SchemaType.OBJECT,
-          properties: {
-            score: { 
-              type: SchemaType.NUMBER,
-              description: "A compliance score from 0-100 based on Cambridge standards."
-            },
-            lessons_detected: { 
-              type: SchemaType.NUMBER,
-              description: "The count of distinct lesson segments identified in the document."
-            },
-            strengths: {
-              type: SchemaType.ARRAY,
-              items: { type: SchemaType.STRING },
-              description: "A list of identified pedagogical strengths."
-            },
-            flags: {
-              type: SchemaType.ARRAY,
-              items: { type: SchemaType.STRING },
-              description: "A list of critical compliance failures or areas for improvement."
-            },
-            summary: { 
-              type: SchemaType.STRING,
-              description: "A concise executive summary of the audit findings."
-            }
-          },
-          required: ["score", "lessons_detected", "strengths", "flags", "summary"]
-        };
 
         const subjectGuide = CAMBRIDGE_SUBJECT_GUIDES[subject] || "";
         const combinedInstruction = `${CAMBRIDGE_RUBRIC_PROMPT}\n\n${subjectGuide}`;
 
-        const model = genAI.getGenerativeModel({
+        const model = getGeminiClient().getGenerativeModel({
           model: "gemini-3.6-flash",
           systemInstruction: combinedInstruction,
           generationConfig: {
             responseMimeType: "application/json",
-            responseSchema,
+            responseSchema: auditResponseSchema,
           },
         });
 
@@ -119,7 +94,7 @@ export const processLessonPlanAudit = inngest.createFunction(
               fileUri: geminiFile.uri
             }
           },
-          { text: `Please audit this uploaded lesson plan for ${gradeLevel || 'students'} ${subject || ''} against standard rubrics. Ensure content is strictly age-appropriate and pedagogically aligned.` }
+          { text: `Please audit this uploaded lesson plan for ${gradeLevel || 'students'} ${subject || ''} against standard rubrics. Carefully evaluate time compliance/pacing feasibility, age-appropriateness, and instructional delivery guidance.` }
         ]);
 
         const responseText = result.response.text();
@@ -128,14 +103,21 @@ export const processLessonPlanAudit = inngest.createFunction(
 
       // Step E: Save to Firestore
       await step.run("save-results", async () => {
-        // 1. Write AI Audit Results
+        // 1. Write AI Audit Results with strict undefined guards
         await adminDb.collection("ai_audits").add({
           submission_id: submissionId,
-          score: auditResult.score,
-          lessons_detected: auditResult.lessons_detected,
-          strengths: auditResult.strengths,
-          flags: auditResult.flags,
-          raw_response: auditResult,
+          score: typeof auditResult.score === "number" ? auditResult.score : 0,
+          lessons_detected: typeof auditResult.lessons_detected === "number" ? auditResult.lessons_detected : 1,
+          strengths: Array.isArray(auditResult.strengths) ? auditResult.strengths : [],
+          flags: Array.isArray(auditResult.flags) ? auditResult.flags : [],
+          cambridge_attributes: auditResult.cambridge_attributes || null,
+          command_verbs: Array.isArray(auditResult.command_verbs) ? auditResult.command_verbs : [],
+          cognitive_demand: auditResult.cognitive_demand || null,
+          eal_scaffolding_score: typeof auditResult.eal_scaffolding_score === "number" ? auditResult.eal_scaffolding_score : null,
+          time_compliance: auditResult.time_compliance || null,
+          age_appropriateness: auditResult.age_appropriateness || null,
+          instructional_delivery: auditResult.instructional_delivery || null,
+          raw_response: auditResult || {},
           created_at: new Date()
         });
 
@@ -151,10 +133,12 @@ export const processLessonPlanAudit = inngest.createFunction(
     } catch (error: unknown) {
       // Step F: Failure Handler
       await step.run("handle-failure", async () => {
+        const errorMsg = error instanceof Error ? error.message : "Unknown audit processing failure";
         console.error(`Audit failed for submission ${submissionId}:`, error);
         
         await adminDb.collection("submissions").doc(submissionId).update({
-          status: "FAILED"
+          status: "FAILED",
+          error_message: errorMsg
         });
       });
       
@@ -174,3 +158,40 @@ export const processLessonPlanAudit = inngest.createFunction(
     }
   }
 );
+
+/**
+ * Automated Defaulters Telegram Report Function
+ * Triggers on a weekly cron schedule (Friday 17:00) or manually via 'defaulters.check' event.
+ */
+export const checkAndReportDefaulters = inngest.createFunction(
+  {
+    id: "check-and-report-defaulters",
+    retries: 2,
+    triggers: [
+      { cron: "0 17 * * 5" }, // Every Friday at 17:00 UTC
+      { event: "defaulters.check" } // Manual trigger event
+    ]
+  },
+  async ({ event, step }) => {
+    const eventData = event.data as { weekName?: string } | undefined;
+    const weekName = eventData?.weekName;
+
+    // Step 1: Compute defaulters report
+    const report = await step.run("fetch-defaulters-data", async () => {
+      return await getDefaultersReportForWeek(weekName);
+    });
+
+    // Step 2: Format and send Telegram alert
+    const telegramResult = await step.run("send-telegram-alert", async () => {
+      const messageText = formatDefaultersTelegramMessage(report);
+      return await sendTelegramMessage(messageText, "Markdown");
+    });
+
+    return {
+      status: telegramResult.success ? "success" : "warning",
+      report,
+      telegramResult
+    };
+  }
+);
+

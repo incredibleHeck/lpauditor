@@ -7,6 +7,7 @@ import { storage, auth } from "@/lib/firebase";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { submitLessonPlan } from "@/app/actions/submissions";
 import { toast } from "sonner";
+import { DEPARTMENTS, GRADE_LEVELS, WEEK_OPTIONS } from "@/lib/constants";
 
 // IndexedDB Helper Functions
 const openDB = (): Promise<IDBDatabase> => {
@@ -48,10 +49,11 @@ interface LessonPlanDropzoneProps {
 export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzoneProps) {
   const [file, setFile] = useState<File | null>(null);
   const [uploadState, setUploadState] = useState<"idle" | "uploading" | "success" | "error" | "offline">("idle");
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
-  const [subject, setSubject] = useState("Primary Science");
-  const [gradeLevel, setGradeLevel] = useState("Grade 1");
-  const [weekName, setWeekName] = useState("Week 1");
+  const [subject, setSubject] = useState<string>(DEPARTMENTS[0]);
+  const [gradeLevel, setGradeLevel] = useState<string>(GRADE_LEVELS[0]);
+  const [weekName, setWeekName] = useState<string>(WEEK_OPTIONS[0]);
 
   // Sync Offline Queue when browser goes back online
   useEffect(() => {
@@ -84,13 +86,12 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
               });
 
               const fileUrl = await getDownloadURL(storageRef);
-
               const { success, error: actionError } = await submitLessonPlan({
                 fileUrl,
                 filePath,
                 subject: item.subject,
                 weekName: item.weekName,
-                gradeLevel: item.gradeLevel || "Grade 1",
+                gradeLevel: item.gradeLevel || GRADE_LEVELS[0],
                 teacherId,
               });
 
@@ -124,8 +125,17 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
     if (acceptedFiles.length === 0) return;
     
     const selectedFile = acceptedFiles[0];
+
+    // Pre-flight file validation
+    if (selectedFile.size > 10485760) {
+      toast.error("File exceeds maximum allowed size of 10MB.");
+      setErrorMessage("File exceeds maximum allowed size of 10MB.");
+      return;
+    }
+
     setFile(selectedFile);
     setErrorMessage("");
+    setUploadProgress(0);
 
     if (!navigator.onLine) {
       setUploadState("offline");
@@ -150,19 +160,23 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
       const filePath = `lesson-plans/${teacherId}/${fileName}`;
       const storageRef = ref(storage, filePath);
 
-      // Upload to Firebase Cloud Storage
+      // Upload to Firebase Cloud Storage with progress tracking
       await new Promise<void>((resolve, reject) => {
         const uploadTask = uploadBytesResumable(storageRef, selectedFile);
         uploadTask.on(
           "state_changed",
-          null,
+          (snapshot) => {
+            if (snapshot.totalBytes > 0) {
+              const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+              setUploadProgress(progress);
+            }
+          },
           (err) => reject(err),
           () => resolve()
         );
       });
 
       const fileUrl = await getDownloadURL(storageRef);
-
       // Database Logging & Inngest Trigger
       const { success, error: actionError } = await submitLessonPlan({
         fileUrl,
@@ -176,6 +190,7 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
       if (!success) throw new Error(actionError);
 
       setUploadState("success");
+      toast.success("Lesson plan uploaded and queued for audit!");
       if (onUploadSuccess) onUploadSuccess();
 
     } catch (error: unknown) {
@@ -185,6 +200,13 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
       setErrorMessage(err.message || "Failed to process lesson plan. Please try again.");
     }
   }, [onUploadSuccess, subject, gradeLevel, weekName]);
+
+  const resetUploadState = () => {
+    setFile(null);
+    setUploadState("idle");
+    setUploadProgress(0);
+    setErrorMessage("");
+  };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -215,11 +237,9 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
             disabled={uploadState === "uploading" || uploadState === "success"}
             className="w-full text-sm border border-slate-300 rounded-md py-1.5 px-3 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
           >
-            <option>Primary Science</option>
-            <option>Mathematics</option>
-            <option>English Language</option>
-            <option>History</option>
-            <option>Geography</option>
+            {DEPARTMENTS.map((dept) => (
+              <option key={dept} value={dept}>{dept}</option>
+            ))}
           </select>
         </div>
         <div>
@@ -230,12 +250,9 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
             disabled={uploadState === "uploading" || uploadState === "success"}
             className="w-full text-sm border border-slate-300 rounded-md py-1.5 px-3 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
           >
-            <option>Grade 1</option>
-            <option>Grade 2</option>
-            <option>Grade 3</option>
-            <option>Grade 4</option>
-            <option>Grade 5</option>
-            <option>Grade 6</option>
+            {GRADE_LEVELS.map((gl) => (
+              <option key={gl} value={gl}>{gl}</option>
+            ))}
           </select>
         </div>
         <div>
@@ -246,12 +263,9 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
             disabled={uploadState === "uploading" || uploadState === "success"}
             className="w-full text-sm border border-slate-300 rounded-md py-1.5 px-3 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
           >
-            <option>Week 1</option>
-            <option>Week 2</option>
-            <option>Week 3</option>
-            <option>Week 4</option>
-            <option>Week 5</option>
-            <option>Week 6</option>
+            {WEEK_OPTIONS.map((w) => (
+              <option key={w} value={w}>{w}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -281,16 +295,22 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
                 <p className="text-sm font-medium text-slate-700">
                   Drag and drop your lesson plan here, or click to browse
                 </p>
-                <p className="text-xs text-slate-400 mt-1">Supports Cambridge formats (.docx or .pdf)</p>
+                <p className="text-xs text-slate-400 mt-1">Supports Cambridge formats (.docx or .pdf) • Max 10MB</p>
               </div>
             )}
           </>
         )}
 
         {uploadState === "uploading" && (
-          <div className="flex flex-col items-center justify-center py-4">
+          <div className="flex flex-col items-center justify-center py-4 w-full max-w-xs mx-auto">
             <Loader2 className="h-10 w-10 text-amber-500 animate-spin mb-3" />
-            <p className="text-sm font-medium text-slate-700">Encrypting & Uploading to Vault...</p>
+            <p className="text-sm font-medium text-slate-700">Encrypting & Uploading to Storage... {uploadProgress}%</p>
+            <div className="w-full bg-slate-200 rounded-full h-2 mt-3 overflow-hidden border border-slate-300">
+              <div 
+                className="bg-amber-500 h-full rounded-full transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
           </div>
         )}
 
@@ -298,6 +318,15 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
           <div className="flex flex-col items-center justify-center py-4">
             <CheckCircle className="h-10 w-10 text-green-500 mb-3" />
             <p className="text-sm font-medium text-green-700">Upload Complete</p>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                resetUploadState();
+              }}
+              className="mt-3 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs rounded-lg transition-all shadow-xs cursor-pointer"
+            >
+              + Upload Another Plan
+            </button>
           </div>
         )}
 

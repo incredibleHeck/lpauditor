@@ -4,7 +4,7 @@ service cloud.firestore {
     
     // Helper Functions
     function isAuthenticated() {
-      return request.auth != null;
+      return request.auth != null && request.auth.token.email.matches('.*@stadelaideschool\\.com$');
     }
     
     function isOwner(userId) {
@@ -15,35 +15,55 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data;
     }
 
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role == 'ADMIN';
+    }
+
     function isHODForSubject(subject) {
       return isAuthenticated() && 
-        getUserData().role == 'HOD' && 
-        getUserData().department == subject;
+        (getUserData().role == 'HOD' && getUserData().department == subject || isAdmin());
+    }
+
+    function getSubmission(submissionId) {
+      return get(/databases/$(database)/documents/submissions/$(submissionId)).data;
     }
 
     // Profiles Collection
     match /profiles/{userId} {
       allow read: if isAuthenticated();
-      allow create, update: if isOwner(userId);
+      // Allow initial profile creation by owner, but forbid modifying role/department on update
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) && 
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.department == resource.data.department;
     }
 
     // Submissions Collection
     match /submissions/{submissionId} {
       allow read: if isAuthenticated() && (
         resource.data.teacher_id == request.auth.uid ||
-        isHODForSubject(resource.data.subject)
+        isHODForSubject(resource.data.subject) ||
+        isAdmin()
       );
       allow create: if isAuthenticated() && request.resource.data.teacher_id == request.auth.uid;
+      // Prevent teachers from modifying internal status/score fields
       allow update: if isAuthenticated() && (
-        resource.data.teacher_id == request.auth.uid ||
-        isHODForSubject(resource.data.subject)
+        (resource.data.teacher_id == request.auth.uid && request.resource.data.status == resource.data.status) ||
+        isHODForSubject(resource.data.subject) ||
+        isAdmin()
       );
     }
 
     // AI Audits Collection
     match /ai_audits/{auditId} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Only written server-side via Firebase Admin SDK
+      // Only allow reading if user owns the parent submission or is HOD for its subject
+      allow read: if isAuthenticated() && (
+        getSubmission(resource.data.submission_id).teacher_id == request.auth.uid ||
+        isHODForSubject(getSubmission(resource.data.submission_id).subject) ||
+        isAdmin()
+      );
+      allow write: if false; // Written exclusively server-side via Firebase Admin SDK
     }
   }
 }
+
