@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CheckCircle, Clock, Loader2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, AlertCircle } from "lucide-react";
 
 interface StatusBadgeProps {
   status: string | null;
@@ -15,35 +15,35 @@ export function StatusBadge({ status }: StatusBadgeProps) {
 
   if (isPending) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-700 text-xs font-bold rounded-lg">
-        <Clock size={13} /> Pending Queue
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-semibold rounded-md">
+        <Clock size={12} className="text-amber-700" /> Pending
       </span>
     );
   }
 
   if (isProcessing) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-700 text-xs font-bold rounded-lg animate-pulse">
-        <Loader2 className="animate-spin" size={13} /> Analyzing...
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-blue-50 border border-blue-200 text-blue-800 text-[11px] font-semibold rounded-md animate-pulse">
+        <Loader2 className="animate-spin text-blue-700" size={12} /> Analyzing…
       </span>
     );
   }
 
   if (isCompleted) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 border border-green-500/20 text-green-700 text-xs font-bold rounded-lg">
-        <CheckCircle size={13} /> Audit Complete
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold rounded-md">
+        <CheckCircle2 size={12} className="text-emerald-700" /> Audited
       </span>
     );
   }
 
   if (isFailed) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 border border-red-500/20 text-red-700 text-xs font-bold rounded-lg">
-        <AlertTriangle size={13} /> Audit Failed
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-800 text-[11px] font-semibold rounded-md">
+        <AlertCircle size={12} className="text-rose-700" /> Failed
       </span>
     );
   }
 
-  return <span className="text-xs text-zinc-400 italic">Unknown</span>;
+  return <span className="text-xs text-slate-400 italic">Unknown</span>;
 }

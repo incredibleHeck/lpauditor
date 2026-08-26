@@ -7,7 +7,7 @@ import { signOut } from "firebase/auth";
 import LessonPlanDropzone from "./LessonPlanDropzone";
 import SubmissionsDashboard from "./SubmissionsDashboard";
 import HODDashboard from "./HODDashboard";
-import { BookOpen, LogOut, Shield, UserCheck } from "lucide-react";
+import { BookOpen, LogOut, Shield, UserCheck, CheckCircle2, Sparkles, FileCheck, Layers } from "lucide-react";
 import type { Submission, UserProfile } from "@/lib/types";
 
 interface DashboardPageContentProps {
@@ -34,8 +34,8 @@ export default function DashboardPageContent({
     router.refresh();
   };
 
-  const teacherName = profile?.full_name || "St. Adelaide Staff";
-  const department = profile?.department || "All Departments";
+  const teacherName = profile?.full_name || "Faculty Member";
+  const department = profile?.department || "General Faculty";
   const role = profile?.role || "TEACHER";
   const isHOD = role === "HOD" || role === "ADMIN";
   const isAdmin = role === "ADMIN";
@@ -45,34 +45,39 @@ export default function DashboardPageContent({
   );
 
   return (
-    <main className="min-h-screen bg-zinc-50 text-zinc-900 font-sans p-6 md:p-12">
-      <div className="max-w-5xl mx-auto space-y-8">
+    <main className="min-h-screen bg-slate-50 text-slate-900 font-sans p-4 sm:p-6 lg:p-10">
+      <div className="max-w-6xl mx-auto space-y-8">
         
-        {/* Enterprise Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-200 pb-6 gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-600">
-              <BookOpen size={28} />
+        {/* Institutional Top Navigation Bar */}
+        <header className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="p-2.5 bg-slate-900 text-white rounded-xl shadow-2xs shrink-0 flex items-center justify-center">
+              <BookOpen size={24} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-zinc-900">
-                HecTech LPAuditor
-              </h1>
-              <p className="text-sm text-zinc-500">
-                {teacherName} • {isAdmin ? "School Administrator" : `${department} Department`}
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold text-slate-900 tracking-tight">
+                  St. Adelaide International School
+                </h1>
+                <span className="hidden sm:inline-flex px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-semibold rounded-md uppercase tracking-wider">
+                  Cambridge v2.1
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                HecTech LPAuditor • {teacherName} <span className="text-slate-300">•</span> {isAdmin ? "Administrator" : `${department} Department`}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
             {isHOD && (
-              <div className="flex items-center p-1 bg-zinc-200/70 border border-zinc-300/80 rounded-xl text-xs font-bold">
+              <div className="flex items-center p-1 bg-slate-100 border border-slate-200/70 rounded-xl text-xs font-semibold">
                 <button
                   onClick={() => setActiveTab("teacher")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                     activeTab === "teacher"
-                      ? "bg-white text-zinc-900 shadow-sm"
-                      : "text-zinc-600 hover:text-zinc-900"
+                      ? "bg-white text-slate-900 shadow-2xs font-bold"
+                      : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
                   <UserCheck size={14} /> My Submissions
@@ -81,23 +86,23 @@ export default function DashboardPageContent({
                   onClick={() => setActiveTab("hod")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                     activeTab === "hod"
-                      ? "bg-amber-500 text-black font-extrabold shadow-sm"
-                      : "text-zinc-600 hover:text-zinc-900"
+                      ? "bg-slate-900 text-white shadow-2xs font-bold"
+                      : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
-                  <Shield size={14} /> {isAdmin ? "Admin Compliance Portal" : "HOD Department Portal"}
+                  <Shield size={14} /> {isAdmin ? "Admin Portal" : "HOD Department Portal"}
                 </button>
               </div>
             )}
 
             <button
               onClick={handleSignOut}
-              className="flex items-center gap-1.5 px-3 py-2 border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-100 text-zinc-600 hover:text-zinc-900 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0"
+              className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 focus-visible:ring-2 focus-visible:ring-slate-900/20 active:scale-[0.99]"
             >
-              <LogOut size={14} /> Log Out
+              <LogOut size={14} /> Sign Out
             </button>
           </div>
-        </div>
+        </header>
 
         {/* Tab View Switcher */}
         {activeTab === "hod" && isHOD ? (
@@ -108,47 +113,60 @@ export default function DashboardPageContent({
           />
         ) : (
           <>
-            {/* Dashboard Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Teacher Dashboard Layout Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
-              {/* Left Column: Submission Form Card */}
-              <div className="lg:col-span-2 bg-white border border-zinc-200 rounded-xl p-6 md:p-8 shadow-sm space-y-6">
+              {/* Left Column: Upload Submission Form */}
+              <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs space-y-6">
                 <div>
-                  <h2 className="text-xl font-bold text-zinc-900">Submit Weekly Lesson Plan</h2>
-                  <p className="text-sm text-zinc-500 mt-1">
-                    Upload your document to initialize the automated Cambridge pedagogical audit.
+                  <h2 className="text-base font-bold text-slate-900 tracking-tight">Submit Weekly Lesson Plan</h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Upload your lesson plan document to initialize automated Cambridge pedagogical compliance auditing.
                   </p>
                 </div>
                 
-                {/* Dropzone */}
+                {/* Dropzone Component */}
                 <LessonPlanDropzone onUploadSuccess={handleUploadSuccess} />
               </div>
 
-              {/* Right Column: Mini Info Card */}
-              <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm h-fit space-y-5">
-                <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
-                  Audit Guidelines
-                </h3>
-                <ul className="space-y-4 text-sm text-zinc-600">
-                  <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-amber-500 mt-2"></span>
-                    <p>Ensure layout tracking forms are left intact within your Word document.</p>
+              {/* Right Column: Cambridge Standards Info Card */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs h-fit space-y-4">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  <FileCheck size={16} className="text-slate-700" />
+                  Cambridge Rubric Checklist
+                </div>
+                <ul className="space-y-3.5 text-xs text-slate-600">
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 size={15} className="text-slate-900 shrink-0 mt-0.5" />
+                    <p className="leading-relaxed">
+                      <strong className="text-slate-800">Learning Objectives:</strong> State clear SMART objectives with measurable Cambridge command verbs.
+                    </p>
                   </li>
-                  <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-amber-500 mt-2"></span>
-                    <p>Specify dedicated Test or Assessment days directly within your main activity block.</p>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 size={15} className="text-slate-900 shrink-0 mt-0.5" />
+                    <p className="leading-relaxed">
+                      <strong className="text-slate-800">Time & Pacing:</strong> Allocate duration for Starter, Main inquiry, Assessment, and Plenary.
+                    </p>
                   </li>
-                  <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-amber-500 mt-2"></span>
-                    <p>Continuous assessment data must follow chronological subject sequencing.</p>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 size={15} className="text-slate-900 shrink-0 mt-0.5" />
+                    <p className="leading-relaxed">
+                      <strong className="text-slate-800">Differentiation & EAL:</strong> Document explicit scaffolding for varying learner abilities.
+                    </p>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 size={15} className="text-slate-900 shrink-0 mt-0.5" />
+                    <p className="leading-relaxed">
+                      <strong className="text-slate-800">Document Layout:</strong> Preserve standard Cambridge template headers and assessment tables.
+                    </p>
                   </li>
                 </ul>
               </div>
 
             </div>
 
-            {/* Submissions Dashboard List */}
-            <div className="pt-4">
+            {/* Teacher Submissions Dashboard */}
+            <div className="pt-2">
               <SubmissionsDashboard
                 initialSubmissions={initialSubmissions}
                 teacherId={teacherId}
@@ -158,8 +176,8 @@ export default function DashboardPageContent({
           </>
         )}
 
-        <footer className="text-center pt-8 border-t border-zinc-100">
-          <p className="text-xs text-zinc-400">© 2026 HecTech Ltd. Powered by Gemini & Firebase.</p>
+        <footer className="text-center pt-8 border-t border-slate-200 text-xs text-slate-400">
+          <p>© 2026 St. Adelaide International School • Powered by Gemini & Firebase</p>
         </footer>
       </div>
     </main>

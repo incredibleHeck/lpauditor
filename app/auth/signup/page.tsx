@@ -5,15 +5,16 @@ import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import { BookOpen, Mail, Lock, User, Briefcase, ArrowRight, Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { BookOpen, Mail, Lock, User, Briefcase, Building2, ArrowRight, Loader2, AlertCircle, CheckCircle, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import { DEPARTMENTS } from "@/lib/constants";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState("TEACHER");
-  const [department, setDepartment] = useState("Primary Science");
+  const [department, setDepartment] = useState<string>(DEPARTMENTS[0]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -28,7 +29,7 @@ export default function SignupPage() {
     try {
       const cleanEmail = email.trim().toLowerCase();
       if (!cleanEmail.endsWith("@stadelaideschool.com")) {
-        setErrorMsg("Access Restricted: You must register with an official St. Adelaide International School email address (@stadelaideschool.com).");
+        setErrorMsg("Access Restricted: Registration requires an official St. Adelaide International School email address (@stadelaideschool.com).");
         setIsLoading(false);
         return;
       }
@@ -55,7 +56,7 @@ export default function SignupPage() {
         created_at: new Date().toISOString()
       });
 
-      setSuccessMsg("Account created successfully! Redirecting to login...");
+      setSuccessMsg("Account registered successfully! Establishing session…");
       
       const idToken = await userCredential.user.getIdToken();
       await fetch("/api/auth/session", {
@@ -65,62 +66,72 @@ export default function SignupPage() {
       });
 
       setTimeout(() => {
-        router.push("/dashboard");
-      }, 2000);
+        router.push("/");
+      }, 1500);
 
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : "Signup failed. Please try again.");
+      setErrorMsg(err instanceof Error ? err.message : "Signup failed. Please check your details and try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden font-sans">
-      <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-amber-500/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-amber-600/10 blur-[120px] pointer-events-none" />
-
-      <div className="sm:mx-auto sm:w-full sm:max-w-md z-10">
-        <div className="flex justify-center items-center gap-3 mb-6">
-          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-500 shadow-lg shadow-amber-500/5">
-            <BookOpen size={32} />
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        {/* Institutional Branding */}
+        <div className="flex flex-col items-center text-center mb-8 space-y-2">
+          <div className="p-3 bg-slate-900 text-white rounded-2xl shadow-sm flex items-center justify-center">
+            <BookOpen size={28} />
           </div>
           <div>
-            <h2 className="text-3xl font-extrabold text-white tracking-tight">HecTech</h2>
-            <p className="text-xs text-amber-500/80 font-mono uppercase tracking-wider font-semibold">LPAuditor Portal</p>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              St. Adelaide International School
+            </h1>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">
+              Faculty Account Registration • HecTech LPAuditor
+            </p>
           </div>
         </div>
-      </div>
 
-      <div className="mt-2 sm:mx-auto sm:w-full sm:max-w-md z-10 px-4 sm:px-0">
-        <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 py-10 px-6 sm:px-10 rounded-2xl shadow-2xl space-y-6">
-          <div>
-            <h3 className="text-xl font-bold text-white">Create Account</h3>
-            <p className="text-sm text-zinc-400 mt-1">Exclusively for St. Adelaide International School staff (@stadelaideschool.com).</p>
+        {/* Signup Card */}
+        <div className="bg-white border border-slate-200/80 p-8 sm:p-10 rounded-2xl shadow-xs space-y-6">
+          <div className="space-y-1">
+            <h2 className="text-lg font-bold text-slate-900">Create Faculty Profile</h2>
+            <p className="text-xs text-slate-500">
+              Register with your school email to submit and track Cambridge lesson plans.
+            </p>
+          </div>
+
+          <div className="p-3 bg-slate-50 border border-slate-200/60 rounded-xl flex items-start gap-2.5 text-slate-600 text-xs">
+            <ShieldCheck className="shrink-0 text-slate-700 mt-0.5" size={16} />
+            <p className="leading-relaxed">
+              Restricted to verified <strong className="font-semibold text-slate-900">@stadelaideschool.com</strong> educators and administrators.
+            </p>
           </div>
 
           {errorMsg && (
-            <div className="p-3.5 bg-red-950/40 border border-red-500/30 rounded-lg flex gap-3 text-red-400 text-sm">
-              <AlertCircle className="shrink-0 mt-0.5" size={18} />
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-rose-800 text-xs leading-relaxed">
+              <AlertCircle className="shrink-0 text-rose-600 mt-0.5" size={16} />
               <p>{errorMsg}</p>
             </div>
           )}
 
           {successMsg && (
-            <div className="p-3.5 bg-green-950/40 border border-green-500/30 rounded-lg flex gap-3 text-green-400 text-sm">
-              <CheckCircle className="shrink-0 mt-0.5" size={18} />
+            <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5 text-emerald-800 text-xs leading-relaxed">
+              <CheckCircle className="shrink-0 text-emerald-600 mt-0.5" size={16} />
               <p>{successMsg}</p>
             </div>
           )}
 
           <form className="space-y-4" onSubmit={handleSignup}>
             <div className="space-y-1.5">
-              <label htmlFor="fullName" className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+              <label htmlFor="fullName" className="block text-xs font-semibold text-slate-700">
                 Full Name
               </label>
-              <div className="relative rounded-lg shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
-                  <User size={18} />
+              <div className="relative rounded-lg shadow-2xs">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <User size={16} />
                 </div>
                 <input
                   id="fullName"
@@ -129,120 +140,141 @@ export default function SignupPage() {
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="block w-full pl-10 pr-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/80 transition-all text-sm"
-                  placeholder="Hector Aryiku"
+                  className="block w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all text-xs"
+                  placeholder="e.g. Hector Aryiku"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label htmlFor="email" className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-                School Email (@stadelaideschool.com)
+              <label htmlFor="email" className="block text-xs font-semibold text-slate-700">
+                School Email
               </label>
-              <div className="relative rounded-lg shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
-                  <Mail size={18} />
+              <div className="relative rounded-lg shadow-2xs">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <Mail size={16} />
                 </div>
                 <input
                   id="email"
                   name="email"
                   type="email"
+                  autoComplete="email"
+                  spellCheck={false}
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/80 transition-all text-sm"
+                  className="block w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all text-xs"
                   placeholder="name@stadelaideschool.com"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label htmlFor="password" className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+              <label htmlFor="password" className="block text-xs font-semibold text-slate-700">
                 Password
               </label>
-              <div className="relative rounded-lg shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
-                  <Lock size={18} />
+              <div className="relative rounded-lg shadow-2xs">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <Lock size={16} />
                 </div>
                 <input
                   id="password"
                   name="password"
                   type="password"
+                  autoComplete="new-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/80 transition-all text-sm"
+                  className="block w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all text-xs"
                   placeholder="••••••••"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label htmlFor="role" className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-                  Role
+                <label htmlFor="role" className="block text-xs font-semibold text-slate-700">
+                  Institutional Role
                 </label>
-                <div className="relative rounded-lg shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
-                    <Briefcase size={16} />
+                <div className="relative rounded-lg shadow-2xs">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Briefcase size={15} />
                   </div>
                   <select
                     id="role"
                     name="role"
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className="block w-full pl-9 pr-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/80 transition-all text-sm appearance-none cursor-pointer"
+                    className="block w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all text-xs cursor-pointer"
                   >
                     <option value="TEACHER">Teacher</option>
-                    <option value="HOD">Head of Dept</option>
-                    <option value="ADMIN">Admin</option>
+                    <option value="HOD">Head of Department (HOD)</option>
+                    <option value="ADMIN">Administrator</option>
                   </select>
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="department" className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                <label htmlFor="department" className="block text-xs font-semibold text-slate-700">
                   Department
                 </label>
-                <input
-                  id="department"
-                  name="department"
-                  type="text"
-                  required
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  className="block w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/80 transition-all text-sm"
-                  placeholder="Primary Science"
-                />
+                <div className="relative rounded-lg shadow-2xs">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Building2 size={15} />
+                  </div>
+                  <select
+                    id="department"
+                    name="department"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                    className="block w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all text-xs cursor-pointer"
+                  >
+                    {DEPARTMENTS.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                    <option value="Administration">Administration</option>
+                  </select>
+                </div>
               </div>
             </div>
 
-            <div className="pt-4">
+            <div className="pt-2">
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-lg text-sm font-bold text-black bg-amber-500 hover:bg-amber-400 disabled:bg-amber-600/50 disabled:cursor-not-allowed transition-all shadow-lg shadow-amber-500/10 cursor-pointer"
+                className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-slate-900/20 active:scale-[0.99]"
               >
                 {isLoading ? (
-                  <Loader2 className="animate-spin text-black" size={20} />
+                  <>
+                    <Loader2 className="animate-spin" size={16} />
+                    <span>Creating account…</span>
+                  </>
                 ) : (
                   <>
-                    Sign Up <ArrowRight size={18} />
+                    <span>Create Faculty Account</span>
+                    <ArrowRight size={15} />
                   </>
                 )}
               </button>
             </div>
           </form>
 
-          <div className="text-center pt-4 border-t border-zinc-800/80">
-            <p className="text-sm text-zinc-500">
+          <div className="text-center pt-4 border-t border-slate-100">
+            <p className="text-xs text-slate-500">
               Already have an account?{" "}
-              <Link href="/auth/login" className="text-amber-500 hover:text-amber-400 font-semibold transition-all">
+              <Link href="/auth/login" className="text-slate-900 font-semibold hover:underline underline-offset-4">
                 Sign In
               </Link>
             </p>
           </div>
         </div>
+
+        {/* Footer */}
+        <p className="text-center text-[11px] text-slate-400 mt-8">
+          © 2026 St. Adelaide International School • Powered by HecTech LPAuditor
+        </p>
       </div>
     </div>
   );

@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import { ExternalLink, FileText } from "lucide-react";
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface DocumentPreviewProps {
   fileName: string;
@@ -16,6 +16,12 @@ interface DocumentPreviewProps {
 export default function DocumentPreview({ fileName, fileUrl, isPdf, flags = [] }: DocumentPreviewProps) {
   const [numPages, setNumPages] = useState<number>();
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+    }
+  }, []);
+
   function onDocumentLoadSuccess({ numPages }: { numPages: number }): void {
     setNumPages(numPages);
   }
@@ -23,56 +29,62 @@ export default function DocumentPreview({ fileName, fileUrl, isPdf, flags = [] }
   if (!fileUrl) return null;
 
   return (
-    <div className="w-1/2 border-r border-zinc-200 bg-zinc-900 flex flex-col">
-      <div className="px-4 py-2 bg-zinc-950 border-b border-zinc-800 flex justify-between items-center text-xs text-zinc-400">
-        <span className="font-semibold truncate max-w-[240px]">{fileName}</span>
+    <div className="w-1/2 border-r border-slate-200 bg-slate-50 flex flex-col font-sans">
+      <div className="px-4 py-2.5 bg-white border-b border-slate-200 flex justify-between items-center text-xs text-slate-600">
+        <span className="font-semibold text-slate-800 truncate max-w-[220px]">{fileName}</span>
         <a 
           href={fileUrl} 
           target="_blank" 
           rel="noreferrer"
-          className="flex items-center gap-1 text-amber-400 hover:underline font-bold"
+          className="inline-flex items-center gap-1 text-slate-900 hover:text-slate-700 font-semibold underline underline-offset-2 cursor-pointer"
         >
-          Open in New Tab <ExternalLink size={12} />
+          <span>Open Document</span>
+          <ExternalLink size={12} />
         </a>
       </div>
-      <div className="flex-1 bg-zinc-800 overflow-y-auto flex flex-col items-center justify-start py-4 relative">
+      <div className="flex-1 bg-slate-100/70 overflow-y-auto flex flex-col items-center justify-start py-5 px-3 relative">
         {isPdf ? (
           <div className="flex flex-col items-center w-full relative">
             <Document 
               file={fileUrl} 
               onLoadSuccess={onDocumentLoadSuccess}
-              loading={<div className="text-zinc-400 mt-10">Loading PDF...</div>}
+              loading={<div className="text-slate-400 text-xs mt-10">Loading PDF document preview…</div>}
               className="flex flex-col items-center"
             >
               {numPages && Array.from(new Array(numPages), (el, index) => (
-                 <div key={`page_${index + 1}`} className="mb-4 relative shadow-lg">
+                 <div key={`page_${index + 1}`} className="mb-4 relative shadow-xs bg-white rounded-lg overflow-hidden border border-slate-200">
                    <Page 
                      pageNumber={index + 1} 
                      renderTextLayer={false} 
                      renderAnnotationLayer={false}
-                     width={450}
+                     width={440}
                    />
                    {flags.length > 0 && (
-                     <div className="absolute inset-0 border-2 border-red-500/30 bg-red-500/5 pointer-events-none" />
+                     <div className="absolute inset-0 border border-rose-500/20 bg-rose-500/[0.02] pointer-events-none" />
                    )}
                  </div>
               ))}
             </Document>
           </div>
         ) : (
-          <div className="p-8 text-center text-zinc-300 space-y-4 max-w-sm mt-20">
-            <FileText className="mx-auto h-16 w-16 text-zinc-500" />
-            <p className="text-sm font-semibold">Word Document (.docx) Preview</p>
-            <p className="text-xs text-zinc-400">
-              PDF previewer is optimized for PDF documents. Click below to view or download the uploaded lesson plan file.
-            </p>
+          <div className="p-8 text-center text-slate-600 space-y-4 max-w-xs my-auto bg-white border border-slate-200/80 rounded-2xl shadow-xs">
+            <div className="w-12 h-12 bg-slate-100 rounded-xl mx-auto flex items-center justify-center text-slate-700">
+              <FileText size={24} />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-slate-900">Word Document (.docx)</p>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Native inline preview is optimized for PDF files. You can download or open the original lesson plan below.
+              </p>
+            </div>
             <a
               href={fileUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs rounded-xl transition-all shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-lg transition-all shadow-2xs"
             >
-              Download / Open File <ExternalLink size={14} />
+              <span>Download Lesson Plan</span>
+              <ExternalLink size={13} />
             </a>
           </div>
         )}

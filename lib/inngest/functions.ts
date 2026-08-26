@@ -1,6 +1,5 @@
 import { inngest } from "./client";
 import { adminDb, adminStorage } from "../firebase-admin";
-import { SchemaType, ResponseSchema } from "@google/generative-ai";
 import { GoogleAIFileManager, GoogleAICacheManager } from "@google/generative-ai/server";
 import { CAMBRIDGE_RUBRIC_PROMPT, CAMBRIDGE_SUBJECT_GUIDES } from "../rubric";
 import { getDefaultersReportForWeek } from "../defaulters";
@@ -14,7 +13,7 @@ import { auditResponseSchema } from "../schemas/auditSchema";
 /**
  * Pedagogical Audit Worker
  * 
- * Uses Gemini 3.6 Flash for multimodal document analysis with Google Firebase backend.
+ * Uses Gemini 3.7 Flash for multimodal document analysis with Google Firebase backend.
  */
 
 // Initialize Gemini File Manager & Cache Manager
@@ -73,9 +72,8 @@ export const processLessonPlanAudit = inngest.createFunction(
 
     let isSuccess = false;
     try {
-      // Step C: Inference with Gemini 3.6 Flash
+      // Step C: Inference with Gemini 3.7 Flash
       const auditResult = await step.run("execute-audit", async () => {
-
         const subjectGuide = CAMBRIDGE_SUBJECT_GUIDES[subject] || "";
         const combinedInstruction = `${CAMBRIDGE_RUBRIC_PROMPT}\n\n${subjectGuide}`;
         const cacheDisplayName = `rubric-${subject.replace(/[^a-zA-Z0-9]/g, "")}`.substring(0, 32);
@@ -83,7 +81,7 @@ export const processLessonPlanAudit = inngest.createFunction(
         let cacheName = "";
         try {
           const listResult = await cacheManager.list();
-          const existingCache = listResult.cachedContents?.find((c: any) => c.displayName === cacheDisplayName);
+          const existingCache = listResult.cachedContents?.find((c: { displayName?: string; name?: string }) => c.displayName === cacheDisplayName);
           if (existingCache && existingCache.name) {
             cacheName = existingCache.name;
           } else {
@@ -96,11 +94,20 @@ export const processLessonPlanAudit = inngest.createFunction(
             });
             cacheName = newCache.name || "";
           }
-        } catch (e: any) {
-          console.warn("Context caching skipped or failed (likely <32k tokens):", e.message);
+        } catch (e: unknown) {
+          const errMessage = e instanceof Error ? e.message : String(e);
+          console.warn("Context caching skipped or failed (likely <32k tokens):", errMessage);
         }
 
-        const modelOpts: any = {
+        const modelOpts: {
+          model: string;
+          generationConfig: {
+            responseMimeType: string;
+            responseSchema: typeof auditResponseSchema;
+          };
+          cachedContent?: { name: string };
+          systemInstruction?: string;
+        } = {
           model: "gemini-3.7-flash",
           generationConfig: {
             responseMimeType: "application/json",
@@ -109,12 +116,13 @@ export const processLessonPlanAudit = inngest.createFunction(
         };
 
         if (cacheName) {
-          modelOpts.cachedContent = cacheName;
+          modelOpts.cachedContent = { name: cacheName };
         } else {
           modelOpts.systemInstruction = combinedInstruction;
         }
 
-        const model = getGeminiClient().getGenerativeModel(modelOpts);
+        const ai = getGeminiClient();
+        const model = ai.getGenerativeModel(modelOpts as unknown as Parameters<typeof ai.getGenerativeModel>[0]);
 
         const result = await model.generateContent([
           {
@@ -223,4 +231,3 @@ export const checkAndReportDefaulters = inngest.createFunction(
     };
   }
 );
-

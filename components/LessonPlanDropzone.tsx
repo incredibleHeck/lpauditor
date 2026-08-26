@@ -2,7 +2,7 @@
 
 import { useCallback, useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
-import { UploadCloud, FileText, CheckCircle, Loader2, AlertCircle, WifiOff } from "lucide-react";
+import { UploadCloud, FileText, CheckCircle2, Loader2, AlertCircle, WifiOff } from "lucide-react";
 import { storage, auth } from "@/lib/firebase";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { submitLessonPlan } from "@/app/actions/submissions";
@@ -128,8 +128,8 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
 
     // Pre-flight file validation
     if (selectedFile.size > 10485760) {
-      toast.error("File exceeds maximum allowed size of 10MB.");
-      setErrorMessage("File exceeds maximum allowed size of 10MB.");
+      toast.error("File exceeds maximum allowed size of 10 MB.");
+      setErrorMessage("File exceeds maximum allowed size of 10 MB.");
       return;
     }
 
@@ -141,8 +141,8 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
       setUploadState("offline");
       try {
         await storeOfflineSubmission(selectedFile, subject, weekName, gradeLevel);
-        toast.info("You're offline. Lesson plan queued for upload.");
-      } catch (error: unknown) {
+        toast.info("You're offline. Lesson plan queued for automatic upload.");
+      } catch (_err: unknown) {
         setUploadState("error");
         setErrorMessage("IndexedDB storage failed. Please connect to the internet.");
       }
@@ -227,41 +227,44 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
   });
 
   return (
-    <div className="w-full">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-left">
-        <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1">Subject</label>
+    <div className="w-full space-y-4 font-sans">
+      {/* Configuration Pickers */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="space-y-1.5">
+          <label className="block text-xs font-semibold text-slate-700">Subject Department</label>
           <select 
             value={subject} 
             onChange={(e) => setSubject(e.target.value)}
             disabled={uploadState === "uploading" || uploadState === "success"}
-            className="w-full text-sm border border-slate-300 rounded-md py-1.5 px-3 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full text-xs font-medium border border-slate-200 rounded-lg py-2 px-3 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all cursor-pointer shadow-2xs"
           >
             {DEPARTMENTS.map((dept) => (
               <option key={dept} value={dept}>{dept}</option>
             ))}
           </select>
         </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1">Grade Level</label>
+
+        <div className="space-y-1.5">
+          <label className="block text-xs font-semibold text-slate-700">Grade Level</label>
           <select 
             value={gradeLevel} 
             onChange={(e) => setGradeLevel(e.target.value)}
             disabled={uploadState === "uploading" || uploadState === "success"}
-            className="w-full text-sm border border-slate-300 rounded-md py-1.5 px-3 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full text-xs font-medium border border-slate-200 rounded-lg py-2 px-3 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all cursor-pointer shadow-2xs"
           >
             {GRADE_LEVELS.map((gl) => (
               <option key={gl} value={gl}>{gl}</option>
             ))}
           </select>
         </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1">Week</label>
+
+        <div className="space-y-1.5">
+          <label className="block text-xs font-semibold text-slate-700">Academic Week</label>
           <select 
             value={weekName} 
             onChange={(e) => setWeekName(e.target.value)}
             disabled={uploadState === "uploading" || uploadState === "success"}
-            className="w-full text-sm border border-slate-300 rounded-md py-1.5 px-3 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full text-xs font-medium border border-slate-200 rounded-lg py-2 px-3 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all cursor-pointer shadow-2xs"
           >
             {WEEK_OPTIONS.map((w) => (
               <option key={w} value={w}>{w}</option>
@@ -269,45 +272,54 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
           </select>
         </div>
       </div>
+
+      {/* Drag & Drop Surface */}
       <div
         {...getRootProps()}
-        className={`border-2 border-dashed rounded-xl p-8 text-center transition ${
+        className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all ${
           uploadState === "uploading" || uploadState === "success" 
-            ? "cursor-default opacity-75" 
+            ? "cursor-default opacity-90" 
             : "cursor-pointer"
         } ${
           isDragActive
-            ? "border-amber-500 bg-amber-50/50"
-            : "border-slate-300 bg-slate-50 hover:bg-slate-100"
-        } ${uploadState === "error" ? "border-red-500 bg-red-50" : ""} ${
-          uploadState === "offline" ? "border-zinc-500 bg-zinc-50" : ""
+            ? "border-slate-900 bg-slate-100/70"
+            : "border-slate-200 bg-slate-50/50 hover:bg-slate-100/50 hover:border-slate-300"
+        } ${uploadState === "error" ? "border-rose-300 bg-rose-50/50" : ""} ${
+          uploadState === "offline" ? "border-slate-300 bg-slate-100" : ""
         }`}
       >
         <input {...getInputProps()} />
         
         {uploadState === "idle" && (
-          <>
-            <UploadCloud className="mx-auto h-12 w-12 text-slate-400 mb-3" />
+          <div className="space-y-3">
+            <div className="w-12 h-12 bg-white border border-slate-200 rounded-2xl mx-auto flex items-center justify-center text-slate-500 shadow-2xs">
+              <UploadCloud size={24} />
+            </div>
             {isDragActive ? (
-              <p className="text-sm font-medium text-amber-600">Drop the lesson plan here...</p>
+              <p className="text-xs font-bold text-slate-900">Drop your lesson plan here…</p>
             ) : (
               <div>
-                <p className="text-sm font-medium text-slate-700">
-                  Drag and drop your lesson plan here, or click to browse
+                <p className="text-xs font-semibold text-slate-800">
+                  Click to select or drag and drop your lesson plan document
                 </p>
-                <p className="text-xs text-slate-400 mt-1">Supports Cambridge formats (.docx or .pdf) • Max 10MB</p>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Accepted formats: <span className="font-semibold text-slate-600">.docx</span> or <span className="font-semibold text-slate-600">.pdf</span> • Maximum size: 10&nbsp;MB
+                </p>
               </div>
             )}
-          </>
+          </div>
         )}
 
         {uploadState === "uploading" && (
-          <div className="flex flex-col items-center justify-center py-4 w-full max-w-xs mx-auto">
-            <Loader2 className="h-10 w-10 text-amber-500 animate-spin mb-3" />
-            <p className="text-sm font-medium text-slate-700">Encrypting & Uploading to Storage... {uploadProgress}%</p>
-            <div className="w-full bg-slate-200 rounded-full h-2 mt-3 overflow-hidden border border-slate-300">
+          <div className="flex flex-col items-center justify-center py-2 w-full max-w-xs mx-auto space-y-3">
+            <Loader2 className="h-8 w-8 text-slate-900 animate-spin" />
+            <div className="text-center">
+              <p className="text-xs font-bold text-slate-900">Uploading & Staging Document…</p>
+              <p className="text-[11px] font-mono text-slate-500 mt-0.5">{uploadProgress}% uploaded</p>
+            </div>
+            <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
               <div 
-                className="bg-amber-500 h-full rounded-full transition-all duration-300"
+                className="bg-slate-900 h-full rounded-full transition-all duration-200"
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
@@ -315,15 +327,20 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
         )}
 
         {uploadState === "success" && (
-          <div className="flex flex-col items-center justify-center py-4">
-            <CheckCircle className="h-10 w-10 text-green-500 mb-3" />
-            <p className="text-sm font-medium text-green-700">Upload Complete</p>
+          <div className="flex flex-col items-center justify-center py-2 space-y-2.5">
+            <div className="w-10 h-10 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-full flex items-center justify-center">
+              <CheckCircle2 size={22} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-900">Upload Complete</p>
+              <p className="text-[11px] text-slate-500">Document queued for automated Gemini 3.6 pedagogical audit.</p>
+            </div>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 resetUploadState();
               }}
-              className="mt-3 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs rounded-lg transition-all shadow-xs cursor-pointer"
+              className="mt-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-lg transition-all shadow-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-slate-900/20 active:scale-[0.99]"
             >
               + Upload Another Plan
             </button>
@@ -331,34 +348,38 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
         )}
 
         {uploadState === "offline" && (
-          <div className="flex flex-col items-center justify-center py-4">
-            <WifiOff className="h-10 w-10 text-zinc-500 mb-3" />
-            <p className="text-sm font-medium text-zinc-700">Queued Offline</p>
-            <p className="text-xs text-zinc-400 mt-1">Will automatically upload once internet returns.</p>
+          <div className="flex flex-col items-center justify-center py-2 space-y-2">
+            <div className="w-10 h-10 bg-slate-200 text-slate-700 rounded-full flex items-center justify-center">
+              <WifiOff size={20} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-900">Queued Offline in Browser</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Will automatically upload and audit once network connection is restored.</p>
+            </div>
           </div>
         )}
       </div>
 
       {file && uploadState !== "idle" && (
-        <div className="mt-4 p-3 bg-slate-100 rounded-lg flex items-center justify-between border border-slate-200">
-          <div className="flex items-center gap-2 overflow-hidden">
-            <FileText className="text-amber-600 h-5 w-5 shrink-0" />
-            <span className="text-sm font-medium text-slate-700 truncate">
+        <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between">
+          <div className="flex items-center gap-2.5 overflow-hidden">
+            <FileText className="text-slate-700 h-4 w-4 shrink-0" />
+            <span className="text-xs font-medium text-slate-800 truncate">
               {file.name}
             </span>
           </div>
           {uploadState === "error" && (
-             <span className="flex items-center gap-1 text-xs font-semibold px-2 py-1 bg-red-100 text-red-800 rounded">
-               <AlertCircle size={14} /> Failed
+             <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-md">
+               <AlertCircle size={12} /> Failed
              </span>
           )}
           {uploadState === "success" && (
-            <span className="text-xs font-semibold px-2 py-1 bg-green-100 text-green-800 rounded">
-              Ready for Audit
+            <span className="text-[11px] font-semibold px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-md">
+              Queued for Audit
             </span>
           )}
           {uploadState === "offline" && (
-            <span className="text-xs font-semibold px-2 py-1 bg-zinc-200 text-zinc-800 rounded">
+            <span className="text-[11px] font-semibold px-2 py-0.5 bg-slate-200 text-slate-800 rounded-md">
               Offline Queue
             </span>
           )}
@@ -366,7 +387,10 @@ export default function LessonPlanDropzone({ onUploadSuccess }: LessonPlanDropzo
       )}
 
       {errorMessage && (
-        <p className="mt-2 text-sm text-red-600 font-medium text-center">{errorMessage}</p>
+        <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 font-medium flex items-center gap-2">
+          <AlertCircle size={14} className="shrink-0 text-rose-600" />
+          <p>{errorMessage}</p>
+        </div>
       )}
     </div>
   );

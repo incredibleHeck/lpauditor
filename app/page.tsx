@@ -41,7 +41,7 @@ export default function Home() {
           setProfile(docSnap.data() as UserProfile);
         } else {
           setProfile({
-            full_name: user.displayName || "Teacher",
+            full_name: user.displayName || "Faculty Member",
             role: "TEACHER",
             department: "Primary Science",
           });
@@ -58,13 +58,13 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col justify-center items-center gap-4 font-sans text-white">
-        <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-500">
-          <BookOpen size={36} />
+      <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center gap-3.5 font-sans text-slate-900 p-6">
+        <div className="p-3.5 bg-slate-900 text-white rounded-2xl shadow-xs">
+          <BookOpen size={28} />
         </div>
-        <div className="flex items-center gap-2">
-          <Loader2 className="animate-spin text-amber-500" size={20} />
-          <span className="text-sm text-zinc-400 font-medium">Authenticating & Loading Workspace...</span>
+        <div className="flex items-center gap-2 text-slate-600">
+          <Loader2 className="animate-spin text-slate-900" size={18} />
+          <span className="text-xs font-semibold tracking-wide">Authenticating & Loading Workspace…</span>
         </div>
       </div>
     );

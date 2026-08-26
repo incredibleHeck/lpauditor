@@ -5,21 +5,19 @@ import { getDepartmentSubmissions } from "@/app/actions/submissions";
 import { getDepartmentAnalytics } from "@/app/actions/ai";
 import { getDefaultersReportAction, triggerTelegramDefaulterReportAction } from "@/app/actions/notifications";
 import { 
-  FileText, Loader2, CheckCircle, AlertTriangle, Clock, Calendar, Sparkles, 
-  Users, ShieldAlert, Award, Search, Filter, Check, RotateCcw, UserCheck,
-  Download, RefreshCw, Send, UserX, CalendarClock
+  FileText, Sparkles, Download, RefreshCw, Search, Filter
 } from "lucide-react";
-import { db, auth } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { toast } from "sonner";
 import { DefaulterReportData } from "@/lib/telegram";
 import DepartmentKPIs from "./hod/DepartmentKPIs";
 import DefaultersPanel from "./hod/DefaultersPanel";
+import { SubmissionsTable } from "./SubmissionsTable";
 import AuditDetailsModal from "./AuditDetailsModal";
 import type { Audit, Submission } from "@/lib/types";
 import { getFileName, formatDate, getAuditFromSubmission } from "@/lib/format-utils";
 import { DEPARTMENTS, GRADE_LEVELS } from "@/lib/constants";
-
 
 interface HODDashboardProps {
   initialSubmissions: Submission[];
@@ -32,7 +30,6 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [selectedAudit, setSelectedAudit] = useState<Audit | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [prevInitialSubmissions, setPrevInitialSubmissions] = useState(initialSubmissions);
 
   const [selectedDepartment, setSelectedDepartment] = useState(
     department === "Administration" || !department ? "All Departments" : department
@@ -80,7 +77,7 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
       } else {
         toast.warning(
           res.telegramResult?.error || 
-          "Defaulters report compiled, but Telegram message skipped (check TELEGRAM_BOT_TOKEN)."
+          "Defaulters report compiled, but Telegram dispatch skipped (check TELEGRAM_BOT_TOKEN)."
         );
       }
     } else {
@@ -133,10 +130,6 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
     };
   }, [selectedDepartment, refreshTrigger]);
 
-  useEffect(() => {
-    setSubmissions(initialSubmissions);
-  }, [initialSubmissions]);
-
   const reloadSubmissions = useCallback(async () => {
     if (!department) return;
     const res = await getDepartmentSubmissions(department);
@@ -147,9 +140,9 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
 
   useEffect(() => {
     if (refreshTrigger > 0) {
-      reloadSubmissions();
+      void reloadSubmissions();
     }
-  }, [refreshTrigger, department]);
+  }, [refreshTrigger, reloadSubmissions]);
 
   // Realtime Cloud Firestore listener for department
   useEffect(() => {
@@ -164,7 +157,7 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
     const unsubscribe = onSnapshot(q, () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
-        reloadSubmissions();
+        void reloadSubmissions();
       }, 500);
     });
 
@@ -172,7 +165,7 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
       clearTimeout(timer);
       unsubscribe();
     };
-  }, [department]);
+  }, [department, reloadSubmissions]);
 
   const exportToCSV = () => {
     if (submissions.length === 0) {
@@ -188,7 +181,7 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
     const rows = filteredSubmissions.map((sub) => {
       const audit = getAuditFromSubmission(sub);
       const score = audit?.score !== undefined && audit?.score !== null ? `${audit.score}%` : "N/A";
-      const teacher = sub.profiles?.full_name || "Teacher";
+      const teacher = sub.profiles?.full_name || "Faculty Member";
       const decision = sub.hod_decision || "Pending Review";
       const created = formatDate(sub.created_at);
 
@@ -208,7 +201,7 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${department.replace(/\s+/g, "_")}_Compliance_Report.csv`);
+    link.setAttribute("download", `${selectedDepartment.replace(/\s+/g, "_")}_Compliance_Report.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -224,11 +217,9 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
     }
   };
 
-
-
   // Filtered Submissions Logic
   const filteredSubmissions = submissions.filter((sub) => {
-    const teacherName = sub.profiles?.full_name || "Teacher";
+    const teacherName = sub.profiles?.full_name || "Faculty Member";
     const filename = getFileName(sub.file_url);
     const matchesSearch = 
       teacherName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -250,21 +241,21 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-200 pb-4 gap-3">
+    <div className="space-y-6 font-sans">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200/80 pb-4 gap-3">
         <div>
-          <h2 className="text-xl font-bold text-zinc-900">
-            {selectedDepartment === "All Departments" ? "School-Wide" : selectedDepartment} Compliance & Defaulters
+          <h2 className="text-base font-bold text-slate-900 tracking-tight">
+            {selectedDepartment === "All Departments" ? "School-Wide Compliance" : `${selectedDepartment} Department`}
           </h2>
-          <p className="text-sm text-zinc-500 mt-0.5">
-            Track, audit, and review lesson plans and defaulters across St. Adelaide International School.
+          <p className="text-xs text-slate-500 mt-0.5">
+            Audit results, pedagogical trends, and weekly submission oversight across St. Adelaide International School.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={selectedDepartment}
             onChange={(e) => setSelectedDepartment(e.target.value)}
-            className="px-3 py-1.5 bg-white border border-zinc-300 hover:border-zinc-400 text-zinc-800 text-xs font-bold rounded-lg shadow-2xs outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+            className="px-3 py-1.5 bg-white border border-slate-200 text-slate-900 text-xs font-semibold rounded-lg shadow-2xs outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 cursor-pointer"
           >
             <option value="All Departments">All Departments (School-Wide)</option>
             {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
@@ -272,11 +263,11 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
 
           <button
             onClick={exportToCSV}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs rounded-lg shadow-xs transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-lg shadow-2xs transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-slate-900/20 active:scale-[0.99]"
           >
-            <Download size={14} /> Export CSV Report
+            <Download size={13} /> Export CSV
           </button>
-          <span className="px-2.5 py-1.5 bg-zinc-100 border border-zinc-200 text-zinc-800 text-xs font-bold rounded-lg uppercase tracking-wide">
+          <span className="px-2.5 py-1.5 bg-slate-100 border border-slate-200 text-slate-700 text-xs font-mono font-semibold rounded-lg">
             {submissions.length} Total
           </span>
         </div>
@@ -285,36 +276,35 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
       {/* KPI Cards Grid */}
       <DepartmentKPIs stats={analytics?.stats} loading={loadingAnalytics} />
 
-      {/* AI Weekly Briefing Panel */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-amber-500/5 via-amber-600/[0.02] to-transparent border border-amber-500/20 rounded-2xl p-6 shadow-xs space-y-4">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none" />
+      {/* AI Weekly Executive Briefing Panel */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-600">
-              <Sparkles size={18} />
+            <div className="p-2 bg-slate-100 text-slate-800 rounded-xl">
+              <Sparkles size={16} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-zinc-900">Department AI Weekly Briefing</h3>
-              <p className="text-xs text-zinc-500">Gemini 3.6 Flash synthesis of compliance trends</p>
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Department Pedagogical Synthesis</h3>
+              <p className="text-[11px] text-slate-400">Automated Gemini 3.6 compliance analysis of weekly trends</p>
             </div>
           </div>
           <button
             onClick={() => fetchAnalytics()}
             disabled={loadingAnalytics}
-            className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200 font-bold text-xs rounded-lg shadow-xs cursor-pointer transition-all disabled:opacity-50"
+            className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold rounded-lg shadow-2xs cursor-pointer transition-all disabled:opacity-50"
           >
-            <RefreshCw size={13} className={loadingAnalytics ? "animate-spin" : ""} /> Refresh Briefing
+            <RefreshCw size={12} className={loadingAnalytics ? "animate-spin" : ""} /> Refresh Briefing
           </button>
         </div>
         
         {loadingAnalytics ? (
-          <div className="space-y-2 py-1 animate-pulse">
-            <div className="h-4 bg-zinc-200/60 rounded w-full"></div>
-            <div className="h-4 bg-zinc-200/60 rounded w-5/6"></div>
+          <div className="space-y-2 py-2 animate-pulse">
+            <div className="h-3.5 bg-slate-100 rounded w-full"></div>
+            <div className="h-3.5 bg-slate-100 rounded w-4/5"></div>
           </div>
         ) : (
-          <p className="text-sm text-zinc-700 leading-relaxed font-normal">
-            {analytics?.brief}
+          <p className="text-xs text-slate-700 leading-relaxed font-normal bg-slate-50 p-4 rounded-xl border border-slate-200/60">
+            {analytics?.brief || "No departmental compliance trends detected yet for this selection."}
           </p>
         )}
       </div>
@@ -329,27 +319,27 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
       />
 
       {/* Search & Filter Toolbar */}
-      <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="relative flex-1 w-full">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by teacher name, week, topic..."
-            className="w-full pl-9 pr-4 py-2 text-xs border border-zinc-200 rounded-lg outline-none focus:ring-1 focus:ring-amber-500 bg-zinc-50/50"
+            placeholder="Search by faculty name, week, or lesson topic…"
+            className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 bg-white"
           />
         </div>
 
         <div className="flex flex-wrap gap-2 w-full sm:w-auto items-center">
-          <div className="flex items-center gap-1.5 text-xs text-zinc-500 font-bold">
-            <Filter size={14} /> Filter:
+          <div className="flex items-center gap-1 text-xs text-slate-500 font-semibold">
+            <Filter size={13} /> Filter:
           </div>
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 text-xs font-semibold border border-zinc-200 rounded-lg bg-zinc-50/50 outline-none focus:ring-1 focus:ring-amber-500"
+            className="px-2.5 py-1.5 text-xs font-medium border border-slate-200 rounded-lg bg-white outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 cursor-pointer"
           >
             <option value="ALL">All Audit Statuses</option>
             <option value="COMPLETED">Audited</option>
@@ -363,7 +353,7 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
           <select
             value={gradeFilter}
             onChange={(e) => setGradeFilter(e.target.value)}
-            className="px-3 py-2 text-xs font-semibold border border-zinc-200 rounded-lg bg-zinc-50/50 outline-none focus:ring-1 focus:ring-amber-500"
+            className="px-2.5 py-1.5 text-xs font-medium border border-slate-200 rounded-lg bg-white outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 cursor-pointer"
           >
             <option value="ALL">All Grades</option>
             {GRADE_LEVELS.map((g) => <option key={g} value={g}>{g}</option>)}
@@ -372,167 +362,19 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
       </div>
 
       {filteredSubmissions.length === 0 ? (
-        <div className="text-center py-12 border border-dashed border-zinc-200 bg-white rounded-xl shadow-xs">
-          <FileText className="mx-auto h-12 w-12 text-zinc-300 mb-3" />
-          <h3 className="text-sm font-bold text-zinc-700">No matching submissions found</h3>
-          <p className="text-xs text-zinc-400 mt-1">Try adjusting your search terms or filter selections.</p>
+        <div className="text-center py-12 border border-dashed border-slate-200 bg-white rounded-2xl shadow-2xs space-y-2">
+          <div className="w-12 h-12 bg-slate-100 rounded-2xl mx-auto flex items-center justify-center text-slate-400">
+            <FileText size={22} />
+          </div>
+          <h3 className="text-xs font-bold text-slate-800">No matching department submissions found</h3>
+          <p className="text-[11px] text-slate-400">Try adjusting your search criteria or department filter.</p>
         </div>
       ) : (
-        <div className="bg-white border border-zinc-200 rounded-xl shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-zinc-200 text-left">
-              <thead className="bg-zinc-50/70 text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                <tr>
-                  <th className="px-6 py-4">Lesson Plan</th>
-                  <th className="px-6 py-4">Teacher</th>
-                  <th className="px-6 py-4">Subject</th>
-                  <th className="px-6 py-4">Week / Grade</th>
-                  <th className="px-6 py-4">Audit Status</th>
-                  <th className="px-6 py-4">HOD Decision</th>
-                  <th className="px-6 py-4">Compliance</th>
-                  <th className="px-6 py-4 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-200 text-sm font-medium text-zinc-700">
-                {filteredSubmissions.map((sub) => {
-                  const filename = getFileName(sub.file_url);
-                  const isPending = sub.status === "PENDING";
-                  const isProcessing = sub.status === "PROCESSING";
-                  const isCompleted = sub.status === "COMPLETED";
-                  const isFailed = sub.status === "FAILED";
-
-                  const rawAudit = sub.ai_audits;
-                  const audit = getAuditFromSubmission(sub);
-                  const score = audit?.score;
-
-                  return (
-                    <tr key={sub.id} className="hover:bg-zinc-50/50 transition-colors">
-                      <td className="px-6 py-4.5">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-amber-50 rounded-lg text-amber-600 border border-amber-100 shrink-0">
-                            <FileText size={18} />
-                          </div>
-                          <div className="max-w-[180px] sm:max-w-xs overflow-hidden">
-                            <p className="font-bold text-zinc-900 truncate" title={filename}>
-                              {filename}
-                            </p>
-                            <span className="flex items-center gap-1 text-[11px] text-zinc-400 mt-0.5">
-                              <Calendar size={12} /> {formatDate(sub.created_at)}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4.5 align-middle">
-                        <span className="text-zinc-900 font-bold">{sub.profiles?.full_name || "Teacher"}</span>
-                      </td>
-
-                      <td className="px-6 py-4.5 align-middle">
-                        <span className="text-zinc-600">{sub.subject}</span>
-                      </td>
-
-                      <td className="px-6 py-4.5 align-middle">
-                        <div className="space-y-0.5">
-                          <p className="text-zinc-700 font-semibold">{sub.week_name}</p>
-                          <p className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">{sub.grade_level}</p>
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4.5 align-middle">
-                        {isPending && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-700 text-xs font-bold rounded-lg">
-                            <Clock size={13} /> Pending Queue
-                          </span>
-                        )}
-                        {isProcessing && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-700 text-xs font-bold rounded-lg animate-pulse">
-                            <Loader2 className="animate-spin" size={13} /> Analyzing...
-                          </span>
-                        )}
-                        {isCompleted && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 border border-green-500/20 text-green-700 text-xs font-bold rounded-lg">
-                            <CheckCircle size={13} /> Audit Complete
-                          </span>
-                        )}
-                        {isFailed && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 border border-red-500/20 text-red-700 text-xs font-bold rounded-lg">
-                            <AlertTriangle size={13} /> Audit Failed
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="px-6 py-4.5 align-middle">
-                        {sub.hod_decision === "APPROVED" && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold rounded-lg">
-                            <Check size={13} /> Approved
-                          </span>
-                        )}
-                        {sub.hod_decision === "REVISION_REQUESTED" && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold rounded-lg">
-                            <RotateCcw size={13} /> Revision Needed
-                          </span>
-                        )}
-                        {sub.hod_decision === "NEEDS_OBSERVATION" && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold rounded-lg">
-                            <UserCheck size={13} /> Observation
-                          </span>
-                        )}
-                        {!sub.hod_decision && (
-                          <span className="text-xs text-zinc-400 italic">Pending HOD Review</span>
-                        )}
-                      </td>
-
-                      <td className="px-6 py-4.5 align-middle">
-                        {isCompleted && score !== undefined && score !== null ? (
-                          <div className="flex items-center gap-2">
-                            <span className={`text-base font-extrabold ${
-                              score >= 80 ? "text-emerald-600" : score >= 50 ? "text-amber-600" : "text-red-600"
-                            }`}>
-                              {score}%
-                            </span>
-                            <div className="w-16 bg-zinc-100 rounded-full h-1.5 border border-zinc-200">
-                              <div 
-                                className={`h-full rounded-full ${
-                                  score >= 80 ? "bg-emerald-500" : score >= 50 ? "bg-amber-500" : "bg-red-500"
-                                }`} 
-                                style={{ width: `${score}%` }} 
-                              />
-                            </div>
-                          </div>
-                        ) : isFailed ? (
-                          <span className="text-xs text-red-400 font-semibold">Auditor Error</span>
-                        ) : (
-                          <span className="text-xs text-zinc-400 italic">Awaiting analysis</span>
-                        )}
-                      </td>
-
-                      <td className="px-6 py-4.5 align-middle text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {isCompleted && audit ? (
-                            <button
-                              onClick={() => handleViewAudit(sub)}
-                              className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs rounded-lg shadow-xs transition-all cursor-pointer"
-                            >
-                              Review & Audit
-                            </button>
-                          ) : (
-                            <button
-                              disabled
-                              className="px-3 py-1.5 bg-zinc-100 text-zinc-400 border border-zinc-200 font-bold text-xs rounded-lg cursor-not-allowed"
-                            >
-                              Feedback Locked
-                            </button>
-                          )}
-                        </div>
-                      </td>
-
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <SubmissionsTable
+          submissions={filteredSubmissions}
+          showTeacherColumn={true}
+          onViewAudit={handleViewAudit}
+        />
       )}
 
       <AuditDetailsModal

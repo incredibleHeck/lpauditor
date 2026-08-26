@@ -1,7 +1,8 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import { ShieldCheck, Check, RotateCcw, UserCheck, Loader2, MessageSquare } from "lucide-react";
 import { updateSubmissionDecision } from "@/app/actions/submissions";
-import { auth } from "@/lib/firebase";
 import { toast } from "sonner";
 import type { SubmissionContext } from "@/lib/types";
 
@@ -12,18 +13,18 @@ interface HODDecisionPanelProps {
 }
 
 export default function HODDecisionPanel({ submission, isHODOrAdmin, onDecisionUpdated }: HODDecisionPanelProps) {
+  const [prevSubmissionId, setPrevSubmissionId] = useState<string | undefined>(submission?.id);
   const [hodDecision, setHodDecision] = useState<"APPROVED" | "REVISION_REQUESTED" | "NEEDS_OBSERVATION" | null>(
     submission?.hod_decision || null
   );
   const [hodComments, setHodComments] = useState(submission?.hod_feedback || "");
   const [isSavingDecision, setIsSavingDecision] = useState(false);
 
-  useEffect(() => {
-    if (submission) {
-      setHodDecision(submission.hod_decision || null);
-      setHodComments(submission.hod_feedback || "");
-    }
-  }, [submission]);
+  if (submission?.id !== prevSubmissionId) {
+    setPrevSubmissionId(submission?.id);
+    setHodDecision(submission?.hod_decision || null);
+    setHodComments(submission?.hod_feedback || "");
+  }
 
   const handleSaveDecision = async (decisionToSave: "APPROVED" | "REVISION_REQUESTED" | "NEEDS_OBSERVATION") => {
     if (!submission?.id) return;
@@ -52,71 +53,71 @@ export default function HODDecisionPanel({ submission, isHODOrAdmin, onDecisionU
   if (!isHODOrAdmin) {
     if (!submission?.hod_feedback) return null;
     return (
-      <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl space-y-1">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-800 uppercase tracking-wider">
-          <MessageSquare size={14} className="text-amber-600" /> HOD Feedback Notes
+      <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-1 font-sans">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wider">
+          <MessageSquare size={14} className="text-slate-600" /> HOD Reviewer Feedback
         </div>
-        <p className="text-xs text-zinc-700 leading-relaxed italic">{submission.hod_feedback}</p>
+        <p className="text-xs text-slate-700 leading-relaxed italic">{submission.hod_feedback}</p>
       </div>
     );
   }
 
   return (
-    <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl space-y-3">
+    <div className="p-5 bg-slate-50/70 border border-slate-200/80 rounded-2xl space-y-3.5 font-sans">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs font-bold text-amber-900 uppercase tracking-widest">
-          <ShieldCheck size={16} className="text-amber-600" /> HOD Pedagogical Decision
+        <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
+          <ShieldCheck size={16} className="text-slate-700" /> HOD Pedagogical Review & Action
         </div>
         {submission?.hod_updated_by && (
-          <span className="text-[11px] text-zinc-400 italic">Updated by {submission.hod_updated_by}</span>
+          <span className="text-[11px] text-slate-400 font-medium">Updated by {submission.hod_updated_by}</span>
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2 pt-1">
+      <div className="flex flex-wrap gap-2">
         <button
           onClick={() => handleSaveDecision("APPROVED")}
           disabled={isSavingDecision}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-extrabold text-xs transition-all cursor-pointer ${
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all cursor-pointer ${
             hodDecision === "APPROVED"
-              ? "bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-600/30"
-              : "bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              ? "bg-emerald-700 text-white shadow-2xs"
+              : "bg-white border border-slate-200 text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-200 shadow-2xs"
           }`}
         >
-          <Check size={14} /> Approve Plan
+          <Check size={13} /> Approve Plan
         </button>
         <button
           onClick={() => handleSaveDecision("REVISION_REQUESTED")}
           disabled={isSavingDecision}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-extrabold text-xs transition-all cursor-pointer ${
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all cursor-pointer ${
             hodDecision === "REVISION_REQUESTED"
-              ? "bg-amber-600 text-white shadow-sm ring-2 ring-amber-600/30"
-              : "bg-white border border-amber-300 text-amber-800 hover:bg-amber-50"
+              ? "bg-amber-700 text-white shadow-2xs"
+              : "bg-white border border-slate-200 text-slate-700 hover:bg-amber-50 hover:text-amber-800 hover:border-amber-200 shadow-2xs"
           }`}
         >
-          <RotateCcw size={14} /> Request Revision
+          <RotateCcw size={13} /> Request Revision
         </button>
         <button
           onClick={() => handleSaveDecision("NEEDS_OBSERVATION")}
           disabled={isSavingDecision}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-extrabold text-xs transition-all cursor-pointer ${
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all cursor-pointer ${
             hodDecision === "NEEDS_OBSERVATION"
-              ? "bg-purple-600 text-white shadow-sm ring-2 ring-purple-600/30"
-              : "bg-white border border-purple-300 text-purple-800 hover:bg-purple-50"
+              ? "bg-indigo-700 text-white shadow-2xs"
+              : "bg-white border border-slate-200 text-slate-700 hover:bg-indigo-50 hover:text-indigo-800 hover:border-indigo-200 shadow-2xs"
           }`}
         >
-          <UserCheck size={14} /> Mark for Peer Observation
+          <UserCheck size={13} /> Schedule Peer Observation
         </button>
       </div>
 
-      <div className="space-y-1.5 pt-2">
-        <label className="block text-xs font-bold text-zinc-700">HOD Feedback Notes for Teacher</label>
+      <div className="space-y-1.5 pt-1">
+        <label className="block text-xs font-semibold text-slate-700">Constructive Notes for Faculty Member</label>
         <div className="flex gap-2">
           <input
             type="text"
             value={hodComments}
             onChange={(e) => setHodComments(e.target.value)}
-            placeholder="Add constructive feedback or specific suggestions for revision..."
-            className="flex-1 px-3 py-1.5 text-xs border border-zinc-300 rounded-lg outline-none focus:ring-1 focus:ring-amber-500 bg-white"
+            placeholder="Add specific recommendations or actionable suggestions for revision…"
+            className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 bg-white"
           />
           <button
             onClick={() => {
@@ -124,7 +125,7 @@ export default function HODDecisionPanel({ submission, isHODOrAdmin, onDecisionU
               else toast.info("Please select a decision first.");
             }}
             disabled={isSavingDecision || !hodDecision}
-            className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs rounded-lg shadow-sm transition-all cursor-pointer disabled:opacity-50"
+            className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-lg shadow-2xs transition-all cursor-pointer disabled:opacity-50"
           >
             {isSavingDecision ? <Loader2 size={12} className="animate-spin" /> : "Save Notes"}
           </button>
