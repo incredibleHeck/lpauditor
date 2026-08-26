@@ -1,7 +1,7 @@
 import { inngest } from "./client";
 import { adminDb, adminStorage } from "../firebase-admin";
 import { SchemaType, ResponseSchema } from "@google/generative-ai";
-import { GoogleAIFileManager } from "@google/generative-ai/server";
+import { GoogleAIFileManager, GoogleAICacheManager } from "@google/generative-ai/server";
 import { CAMBRIDGE_RUBRIC_PROMPT, CAMBRIDGE_SUBJECT_GUIDES } from "../rubric";
 import { getDefaultersReportForWeek } from "../defaulters";
 import { sendTelegramMessage, formatDefaultersTelegramMessage } from "../telegram";
@@ -17,8 +17,9 @@ import { auditResponseSchema } from "../schemas/auditSchema";
  * Uses Gemini 3.6 Flash for multimodal document analysis with Google Firebase backend.
  */
 
-// Initialize Gemini File Manager
+// Initialize Gemini File Manager & Cache Manager
 const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY || "");
+const cacheManager = new GoogleAICacheManager(process.env.GEMINI_API_KEY || "");
 
 export const processLessonPlanAudit = inngest.createFunction(
   { 
@@ -77,15 +78,43 @@ export const processLessonPlanAudit = inngest.createFunction(
 
         const subjectGuide = CAMBRIDGE_SUBJECT_GUIDES[subject] || "";
         const combinedInstruction = `${CAMBRIDGE_RUBRIC_PROMPT}\n\n${subjectGuide}`;
+        const cacheDisplayName = `rubric-${subject.replace(/[^a-zA-Z0-9]/g, "")}`.substring(0, 32);
 
-        const model = getGeminiClient().getGenerativeModel({
-          model: "gemini-3.6-flash",
-          systemInstruction: combinedInstruction,
+        let cacheName = "";
+        try {
+          const listResult = await cacheManager.list();
+          const existingCache = listResult.cachedContents?.find((c: any) => c.displayName === cacheDisplayName);
+          if (existingCache && existingCache.name) {
+            cacheName = existingCache.name;
+          } else {
+            const newCache = await cacheManager.create({
+              model: "models/gemini-3.7-flash",
+              displayName: cacheDisplayName,
+              systemInstruction: combinedInstruction,
+              contents: [{ role: "user", parts: [{ text: "Rubric initialization context." }] }],
+              ttlSeconds: 3600
+            });
+            cacheName = newCache.name || "";
+          }
+        } catch (e: any) {
+          console.warn("Context caching skipped or failed (likely <32k tokens):", e.message);
+        }
+
+        const modelOpts: any = {
+          model: "gemini-3.7-flash",
           generationConfig: {
             responseMimeType: "application/json",
             responseSchema: auditResponseSchema,
           },
-        });
+        };
+
+        if (cacheName) {
+          modelOpts.cachedContent = cacheName;
+        } else {
+          modelOpts.systemInstruction = combinedInstruction;
+        }
+
+        const model = getGeminiClient().getGenerativeModel(modelOpts);
 
         const result = await model.generateContent([
           {

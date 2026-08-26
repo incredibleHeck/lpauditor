@@ -134,11 +134,11 @@ export default function AuditDetailsModal({
           
           {/* Left Panel: Side-by-Side Document Preview */}
           {showDocPreview && fileUrl && (
-            <DocumentPreview fileName={fileName} fileUrl={fileUrl} isPdf={isPdf} />
+            <DocumentPreview fileName={fileName} fileUrl={fileUrl} isPdf={isPdf} flags={flags} />
           )}
 
           {/* Right Panel: Audit Report & Chat Assistant */}
-          <div className={`${showDocPreview ? "w-1/2" : "w-full"} p-6 overflow-y-auto space-y-6 flex-1 bg-white`}>
+          <div id="audit-report-content" className={`${showDocPreview ? "w-1/2" : "w-full"} p-6 overflow-y-auto space-y-6 flex-1 bg-white`}>
             
             {/* HOD Review & Decision Panel (For HOD / Admin or Teacher View) */}
             <HODDecisionPanel
@@ -379,12 +379,34 @@ export default function AuditDetailsModal({
         {/* Footer actions */}
         <div className="px-6 py-3 border-t border-zinc-100 bg-zinc-50/50 flex justify-between items-center">
           <span className="text-xs text-zinc-400 font-medium">St. Adelaide International • Cambridge Standard v2.1</span>
-          <button 
-            onClick={onClose}
-            className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white font-bold rounded-lg text-xs shadow-xs transition-all cursor-pointer"
-          >
-            Close Review
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => {
+                const element = document.getElementById("audit-report-content");
+                if (element) {
+                  import("html2pdf.js").then((html2pdf) => {
+                    const opt = {
+                      margin: 0.5,
+                      filename: `compliance-certificate-${fileName.replace(/\.[^/.]+$/, "")}.pdf`,
+                      image: { type: 'jpeg' as const, quality: 0.98 },
+                      html2canvas: { scale: 2 },
+                      jsPDF: { unit: 'in' as const, format: 'letter' as const, orientation: 'portrait' as const }
+                    };
+                    html2pdf.default().set(opt).from(element).save();
+                  });
+                }
+              }}
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-bold rounded-lg text-xs shadow-xs transition-all cursor-pointer"
+            >
+              Export Certificate
+            </button>
+            <button 
+              onClick={onClose}
+              className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white font-bold rounded-lg text-xs shadow-xs transition-all cursor-pointer"
+            >
+              Close Review
+            </button>
+          </div>
         </div>
 
       </div>

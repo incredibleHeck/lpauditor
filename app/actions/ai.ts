@@ -54,7 +54,7 @@ Here are the AI Audit Findings for this lesson plan:
 Use this context to guide the teacher. When they ask questions, provide clear, actionable, and specific suggestions matching Cambridge standards to fix their flags and build on their strengths. Do not make generic recommendations. Provide markdown-formatted responses with bullet points. Be concise, supportive, and direct.`;
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.7-flash",
       systemInstruction,
     });
 
@@ -148,7 +148,7 @@ export async function getDepartmentAnalytics(departmentFilter: string = "All") {
     let brief = "No department submissions have been successfully audited yet to generate a synthesis.";
     if (completedCount > 0) {
       const genAI = getGeminiClient();
-      const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-3.7-flash" });
 
       const synthesisPrompt = `You are a Lead Pedagogical Auditor analyzing weekly lesson plans for the ${departmentFilter} department.
 Here is a summary of the compliance audits for this week:
