@@ -7,13 +7,13 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { BookOpen, Mail, Lock, User, Briefcase, Building2, ArrowRight, Loader2, AlertCircle, CheckCircle, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { DEPARTMENTS } from "@/lib/constants";
+import { DEPARTMENTS, SCHOOL_EMAIL_DOMAIN, isInstitutionalEmail, isAdminEmail } from "@/lib/constants";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState("TEACHER");
+  const role = "TEACHER";
   const [department, setDepartment] = useState<string>(DEPARTMENTS[0]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -28,18 +28,20 @@ export default function SignupPage() {
 
     try {
       const cleanEmail = email.trim().toLowerCase();
-      if (!cleanEmail.endsWith("@stadelaideschool.com")) {
-        setErrorMsg("Access Restricted: Registration requires an official St. Adelaide International School email address (@stadelaideschool.com).");
+      
+      if (password.length < 8 || !/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/.test(password)) {
+        setErrorMsg("Password must be at least 8 characters long and contain uppercase, lowercase, and numbers.");
         setIsLoading(false);
         return;
       }
 
-      const adminEmails = [
-        "theodorahammond@stadelaideschool.com",
-        "hectoraryiku@stadelaideschool.com",
-        "abigailsackey@stadelaideschool.com"
-      ];
-      const assignedRole = adminEmails.includes(cleanEmail) ? "ADMIN" : role;
+      if (!isInstitutionalEmail(cleanEmail)) {
+        setErrorMsg(`Access Restricted: Registration requires an official St. Adelaide International School email address (${SCHOOL_EMAIL_DOMAIN}).`);
+        setIsLoading(false);
+        return;
+      }
+
+      const assignedRole = isAdminEmail(cleanEmail) ? "ADMIN" : role;
       const assignedDept = cleanEmail === "theodorahammond@stadelaideschool.com" ? "Administration" : department;
 
       // 1. Create User in Firebase Auth
@@ -200,17 +202,14 @@ export default function SignupPage() {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                     <Briefcase size={15} />
                   </div>
-                  <select
+                  <input
                     id="role"
                     name="role"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="block w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all text-xs cursor-pointer"
-                  >
-                    <option value="TEACHER">Teacher</option>
-                    <option value="HOD">Head of Department (HOD)</option>
-                    <option value="ADMIN">Administrator</option>
-                  </select>
+                    type="text"
+                    value="Teacher"
+                    disabled
+                    className="block w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-500 transition-all text-xs cursor-not-allowed"
+                  />
                 </div>
               </div>
 

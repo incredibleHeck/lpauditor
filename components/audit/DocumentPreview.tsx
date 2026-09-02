@@ -18,7 +18,11 @@ export default function DocumentPreview({ fileName, fileUrl, isPdf, flags = [] }
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+      try {
+        pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+      } catch {
+        pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+      }
     }
   }, []);
 
@@ -49,6 +53,20 @@ export default function DocumentPreview({ fileName, fileUrl, isPdf, flags = [] }
               file={fileUrl} 
               onLoadSuccess={onDocumentLoadSuccess}
               loading={<div className="text-slate-400 text-xs mt-10">Loading PDF document preview…</div>}
+              error={
+                <div className="p-6 text-center space-y-3 bg-white rounded-xl border border-slate-200 shadow-2xs my-10 max-w-xs">
+                  <p className="text-xs font-semibold text-slate-800">Preview rendering unavailable</p>
+                  <p className="text-[11px] text-slate-500">You can open or download the original document directly.</p>
+                  <a 
+                    href={fileUrl} 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-semibold"
+                  >
+                    <ExternalLink size={12} /> Open PDF
+                  </a>
+                </div>
+              }
               className="flex flex-col items-center"
             >
               {numPages && Array.from(new Array(numPages), (el, index) => (

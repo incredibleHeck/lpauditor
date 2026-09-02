@@ -6,10 +6,14 @@ service firebase.storage {
     }
 
     match /lesson-plans/{userId}/{allPaths=**} {
-      // Allow read if user owns the file or is an HOD
+      // Allow read if user owns the file, is an ADMIN, or is an HOD for the uploader's department
       allow read: if isStAdelaideUser() && (
         request.auth.uid == userId ||
-        firestore.get(/databases/(default)/documents/profiles/$(request.auth.uid)).data.role == 'HOD'
+        firestore.get(/databases/(default)/documents/profiles/$(request.auth.uid)).data.role == 'ADMIN' ||
+        (
+          firestore.get(/databases/(default)/documents/profiles/$(request.auth.uid)).data.role == 'HOD' &&
+          firestore.get(/databases/(default)/documents/profiles/$(request.auth.uid)).data.department == firestore.get(/databases/(default)/documents/profiles/$(userId)).data.department
+        )
       );
       allow write: if isStAdelaideUser() && request.auth.uid == userId;
     }

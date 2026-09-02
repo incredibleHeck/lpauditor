@@ -1,14 +1,16 @@
 import { inngest } from "./client";
 import { adminDb, adminStorage } from "../firebase-admin";
-import { GoogleAIFileManager, GoogleAICacheManager } from "@google/generative-ai/server";
-import { CAMBRIDGE_RUBRIC_PROMPT, CAMBRIDGE_SUBJECT_GUIDES } from "../rubric";
+import { GoogleAIFileManager } from "@google/generative-ai/server";
+import { getPedagogicalRubric } from "../rubric";
 import { getDefaultersReportForWeek } from "../defaulters";
 import { sendTelegramMessage, formatDefaultersTelegramMessage } from "../telegram";
 import { getGeminiClient } from "../gemini";
+import { SCORE_PASSING_THRESHOLD } from "../constants";
+import { logger } from "@/lib/logger";
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { auditResponseSchema } from "../schemas/auditSchema";
+import { auditResponseSchema, zodAuditResponseSchema, ZodAuditResponse } from "../schemas/auditSchema";
 
 /**
  * Pedagogical Audit Worker
@@ -16,9 +18,8 @@ import { auditResponseSchema } from "../schemas/auditSchema";
  * Uses Gemini 3.7 Flash for multimodal document analysis with Google Firebase backend.
  */
 
-// Initialize Gemini File Manager & Cache Manager
+// Initialize Gemini File Manager
 const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY || "");
-const cacheManager = new GoogleAICacheManager(process.env.GEMINI_API_KEY || "");
 
 export const processLessonPlanAudit = inngest.createFunction(
   { 
@@ -27,7 +28,7 @@ export const processLessonPlanAudit = inngest.createFunction(
     triggers: [{ event: "lesson_plan.uploaded" }] 
   },
   async ({ event, step }) => {
-    const { submissionId, fileUrl, filePath, subject, gradeLevel } = event.data;
+    const { submissionId, fileUrl, filePath, subject, gradeLevel, teacherId } = event.data;
 
     // Step 0: Mark as PROCESSING in Firestore
     await step.run("update-status-processing", async () => {
@@ -63,6 +64,9 @@ export const processLessonPlanAudit = inngest.createFunction(
           name: uploadResult.file.name,
           mimeType: uploadResult.file.mimeType
         };
+      } catch (err: unknown) {
+        logger.error({ err, submissionId }, "Failed to upload document to Gemini");
+        throw new Error("Failed to upload document to Gemini.");
       } finally {
         if (fs.existsSync(tempFilePath)) {
           fs.unlinkSync(tempFilePath);
@@ -72,57 +76,19 @@ export const processLessonPlanAudit = inngest.createFunction(
 
     let isSuccess = false;
     try {
-      // Step C: Inference with Gemini 3.7 Flash
-      const auditResult = await step.run("execute-audit", async () => {
-        const subjectGuide = CAMBRIDGE_SUBJECT_GUIDES[subject] || "";
-        const combinedInstruction = `${CAMBRIDGE_RUBRIC_PROMPT}\n\n${subjectGuide}`;
-        const cacheDisplayName = `rubric-${subject.replace(/[^a-zA-Z0-9]/g, "")}`.substring(0, 32);
+      const rubricInfo = getPedagogicalRubric(subject);
 
-        let cacheName = "";
-        try {
-          const listResult = await cacheManager.list();
-          const existingCache = listResult.cachedContents?.find((c: { displayName?: string; name?: string }) => c.displayName === cacheDisplayName);
-          if (existingCache && existingCache.name) {
-            cacheName = existingCache.name;
-          } else {
-            const newCache = await cacheManager.create({
-              model: "models/gemini-3.7-flash",
-              displayName: cacheDisplayName,
-              systemInstruction: combinedInstruction,
-              contents: [{ role: "user", parts: [{ text: "Rubric initialization context." }] }],
-              ttlSeconds: 3600
-            });
-            cacheName = newCache.name || "";
-          }
-        } catch (e: unknown) {
-          const errMessage = e instanceof Error ? e.message : String(e);
-          console.warn("Context caching skipped or failed (likely <32k tokens):", errMessage);
-        }
-
-        const modelOpts: {
-          model: string;
-          generationConfig: {
-            responseMimeType: string;
-            responseSchema: typeof auditResponseSchema;
-          };
-          cachedContent?: { name: string };
-          systemInstruction?: string;
-        } = {
+      // Step C: Inference with Gemini 3.7 Flash and runtime Zod validation
+      const auditResult: ZodAuditResponse = await step.run("execute-audit", async () => {
+        const ai = getGeminiClient();
+        const model = ai.getGenerativeModel({
           model: "gemini-3.7-flash",
+          systemInstruction: rubricInfo.combinedInstruction,
           generationConfig: {
             responseMimeType: "application/json",
             responseSchema: auditResponseSchema,
           },
-        };
-
-        if (cacheName) {
-          modelOpts.cachedContent = { name: cacheName };
-        } else {
-          modelOpts.systemInstruction = combinedInstruction;
-        }
-
-        const ai = getGeminiClient();
-        const model = ai.getGenerativeModel(modelOpts as unknown as Parameters<typeof ai.getGenerativeModel>[0]);
+        });
 
         const result = await model.generateContent([
           {
@@ -131,22 +97,53 @@ export const processLessonPlanAudit = inngest.createFunction(
               fileUri: geminiFile.uri
             }
           },
-          { text: `Please audit this uploaded lesson plan for ${gradeLevel || 'students'} ${subject || ''} against standard rubrics. Carefully evaluate time compliance/pacing feasibility, age-appropriateness, and instructional delivery guidance.` }
+          { text: `Please audit this uploaded lesson plan for ${gradeLevel || 'students'} ${subject || ''} against standard rubrics (${rubricInfo.rubricType}). Carefully evaluate time compliance/pacing feasibility, age-appropriateness, and instructional delivery guidance.` }
         ]);
 
         const responseText = result.response.text();
-        return JSON.parse(responseText);
+        let rawParsed: unknown;
+        try {
+          rawParsed = JSON.parse(responseText);
+        } catch (parseErr) {
+          logger.error({ parseErr, responseText, submissionId }, "Failed to parse JSON response from Gemini");
+          throw new Error("Gemini returned invalid or unparseable JSON.");
+        }
+
+        const validation = zodAuditResponseSchema.safeParse(rawParsed);
+        if (!validation.success) {
+          logger.warn({ issues: validation.error.issues, rawParsed, submissionId }, "LLM response failed strict schema validation; applying fallback defaults");
+          // Re-parse with best effort defaults
+          return typeof rawParsed === "object" && rawParsed !== null
+            ? (rawParsed as ZodAuditResponse)
+            : zodAuditResponseSchema.parse({});
+        }
+
+        return validation.data;
       });
 
-      // Step E: Save to Firestore
+      // Step E: Save to Firestore & Enforce Automated 70% Resubmission Threshold Gate
       await step.run("save-results", async () => {
+        const score = typeof auditResult.score === "number" ? auditResult.score : 0;
+        const isBelowThreshold = score < SCORE_PASSING_THRESHOLD;
+        const finalStatus = isBelowThreshold ? "RESUBMISSION_REQUIRED" : "COMPLETED";
+
+        const processedFlags = Array.isArray(auditResult.flags) ? [...auditResult.flags] : [];
+        if (isBelowThreshold) {
+          processedFlags.unshift(
+            `CRITICAL COMPLIANCE FAILURE: Overall score (${score}%) is strictly below the mandatory ${SCORE_PASSING_THRESHOLD}% threshold. Resubmission required before HOD sign-off.`
+          );
+        }
+
         // 1. Write AI Audit Results with strict undefined guards
         await adminDb.collection("ai_audits").add({
           submission_id: submissionId,
-          score: typeof auditResult.score === "number" ? auditResult.score : 0,
+          teacher_id: teacherId,
+          subject: subject,
+          rubric_type: rubricInfo.rubricType,
+          score: score,
           lessons_detected: typeof auditResult.lessons_detected === "number" ? auditResult.lessons_detected : 1,
           strengths: Array.isArray(auditResult.strengths) ? auditResult.strengths : [],
-          flags: Array.isArray(auditResult.flags) ? auditResult.flags : [],
+          flags: processedFlags,
           cambridge_attributes: auditResult.cambridge_attributes || null,
           command_verbs: Array.isArray(auditResult.command_verbs) ? auditResult.command_verbs : [],
           cognitive_demand: auditResult.cognitive_demand || null,
@@ -158,9 +155,16 @@ export const processLessonPlanAudit = inngest.createFunction(
           created_at: new Date()
         });
 
-        // 2. Mark Submission as COMPLETED
+        // 2. Mark Submission with threshold status and auto-decision if failed
         await adminDb.collection("submissions").doc(submissionId).update({
-          status: "COMPLETED"
+          status: finalStatus,
+          requires_resubmission: isBelowThreshold,
+          score_threshold_met: !isBelowThreshold,
+          hod_decision: isBelowThreshold ? "REVISION_REQUESTED" : null,
+          hod_feedback: isBelowThreshold 
+            ? `Automated Resubmission Gate: Compliance score (${score}%) is below the required ${SCORE_PASSING_THRESHOLD}% threshold. Please revise and resubmit.` 
+            : null,
+          updated_at: new Date()
         });
       });
 
@@ -170,8 +174,8 @@ export const processLessonPlanAudit = inngest.createFunction(
     } catch (error: unknown) {
       // Step F: Failure Handler
       await step.run("handle-failure", async () => {
+        logger.error({ error, submissionId }, "Audit processing failed permanently");
         const errorMsg = error instanceof Error ? error.message : "Unknown audit processing failure";
-        console.error(`Audit failed for submission ${submissionId}:`, error);
         
         await adminDb.collection("submissions").doc(submissionId).update({
           status: "FAILED",
@@ -187,8 +191,8 @@ export const processLessonPlanAudit = inngest.createFunction(
         await step.run("cleanup-gemini-file", async () => {
           try {
             await fileManager.deleteFile(geminiFile.name);
-          } catch (cleanupError) {
-            console.error(`Failed to cleanup Gemini file ${geminiFile.name}:`, cleanupError);
+          } catch (err: unknown) {
+            logger.error({ err, submissionId }, `Failed to cleanup Gemini file ${geminiFile.name}`);
           }
         });
       }

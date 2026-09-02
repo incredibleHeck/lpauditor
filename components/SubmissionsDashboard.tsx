@@ -10,7 +10,7 @@ import { SubmissionsTable } from "./SubmissionsTable";
 import { db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { toast } from "sonner";
-import type { Audit, Submission } from "@/lib/types";
+import type { Audit, Submission, SubmissionContext } from "@/lib/types";
 import { getFileName, getAuditFromSubmission } from "@/lib/format-utils";
 import { GRADE_LEVELS } from "@/lib/constants";
 
@@ -18,9 +18,17 @@ interface SubmissionsDashboardProps {
   initialSubmissions: Submission[];
   teacherId: string;
   refreshTrigger: number;
+  teacherName?: string;
+  onRequestRevision?: (sub: SubmissionContext) => void;
 }
 
-export default function SubmissionsDashboard({ initialSubmissions, teacherId, refreshTrigger }: SubmissionsDashboardProps) {
+export default function SubmissionsDashboard({ 
+  initialSubmissions, 
+  teacherId, 
+  refreshTrigger,
+  teacherName = "Faculty Member",
+  onRequestRevision
+}: SubmissionsDashboardProps) {
   const [submissions, setSubmissions] = useState<Submission[]>(initialSubmissions);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [selectedAudit, setSelectedAudit] = useState<Audit | null>(null);
@@ -41,10 +49,23 @@ export default function SubmissionsDashboard({ initialSubmissions, teacherId, re
   }, [teacherId]);
 
   useEffect(() => {
+    let active = true;
+    const fetchFreshSubmissions = async () => {
+      if (!teacherId) return;
+      const res = await getUserSubmissions(teacherId);
+      if (active && res.success && res.data) {
+        setSubmissions(res.data as Submission[]);
+      }
+    };
+
     if (refreshTrigger > 0) {
-      void reloadSubmissions();
+      void fetchFreshSubmissions();
     }
-  }, [refreshTrigger, reloadSubmissions]);
+
+    return () => {
+      active = false;
+    };
+  }, [refreshTrigger, teacherId]);
 
   // Realtime Cloud Firestore listener
   useEffect(() => {
@@ -72,7 +93,7 @@ export default function SubmissionsDashboard({ initialSubmissions, teacherId, re
   const handleRetry = async (submissionId: string) => {
     setRetryingId(submissionId);
     try {
-      const res = await retrySubmissionAudit(submissionId);
+      const res = await retrySubmissionAudit({ submissionId });
       if (res.success) {
         toast.success("Audit process re-triggered successfully!");
         await reloadSubmissions();
@@ -260,7 +281,9 @@ export default function SubmissionsDashboard({ initialSubmissions, teacherId, re
         submission={selectedSubmission}
         fileName={selectedSubmission ? getFileName(selectedSubmission.file_url) : ""}
         userRole="TEACHER"
+        teacherName={teacherName}
         onDecisionUpdated={() => reloadSubmissions()}
+        onRequestRevision={onRequestRevision}
       />
     </div>
   );

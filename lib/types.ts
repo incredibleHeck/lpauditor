@@ -37,6 +37,7 @@ export interface Audit {
     methodology_notes: string;
     step_by_step_tips: string[];
   } | null;
+  rubric_type?: "CAMBRIDGE" | "GENERAL_PEDAGOGICAL" | null;
   raw_response: Record<string, unknown>;
   created_at: string;
 }
@@ -50,6 +51,11 @@ export interface Submission {
   week_name: string;
   grade_level: string;
   status: string | null;
+  requires_resubmission?: boolean;
+  score_threshold_met?: boolean;
+  parent_submission_id?: string | null;
+  version?: number;
+  revision_notes?: string | null;
   hod_decision?: "APPROVED" | "REVISION_REQUESTED" | "NEEDS_OBSERVATION" | null;
   hod_feedback?: string | null;
   hod_updated_at?: string | null;
@@ -67,6 +73,11 @@ export interface SubmissionContext {
   week_name: string;
   grade_level: string;
   status: string | null;
+  requires_resubmission?: boolean;
+  score_threshold_met?: boolean;
+  parent_submission_id?: string | null;
+  version?: number;
+  revision_notes?: string | null;
   hod_decision?: "APPROVED" | "REVISION_REQUESTED" | "NEEDS_OBSERVATION" | null;
   hod_feedback?: string | null;
   hod_updated_at?: string | null;
@@ -80,4 +91,4 @@ export interface UserProfile {
 }
 
 export type HodDecision = "APPROVED" | "REVISION_REQUESTED" | "NEEDS_OBSERVATION";
-export type SubmissionStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+export type SubmissionStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED" | "RESUBMISSION_REQUIRED";

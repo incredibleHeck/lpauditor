@@ -100,3 +100,58 @@ export const auditResponseSchema: ResponseSchema = {
     "instructional_delivery"
   ]
 };
+
+import { z } from "zod";
+
+export const zodAuditResponseSchema = z.object({
+  score: z.number().min(0).max(100).default(0),
+  lessons_detected: z.number().min(1).default(1),
+  strengths: z.array(z.string()).default([]),
+  flags: z.array(z.string()).default([]),
+  summary: z.string().default(""),
+  cambridge_attributes: z
+    .object({
+      confident: z.number().min(0).max(100).default(50),
+      responsible: z.number().min(0).max(100).default(50),
+      reflective: z.number().min(0).max(100).default(50),
+      innovative: z.number().min(0).max(100).default(50),
+      engaged: z.number().min(0).max(100).default(50),
+    })
+    .nullable()
+    .optional(),
+  command_verbs: z.array(z.string()).default([]),
+  cognitive_demand: z
+    .object({
+      low_recall: z.number().min(0).max(100).default(33),
+      medium_application: z.number().min(0).max(100).default(33),
+      high_evaluation: z.number().min(0).max(100).default(34),
+    })
+    .nullable()
+    .optional(),
+  eal_scaffolding_score: z.number().min(0).max(100).nullable().optional(),
+  time_compliance: z
+    .object({
+      is_compliant: z.boolean().default(true),
+      total_allocated_minutes: z.number().default(45),
+      pacing_feedback: z.string().default(""),
+    })
+    .nullable()
+    .optional(),
+  age_appropriateness: z
+    .object({
+      score: z.number().min(0).max(100).default(80),
+      feedback: z.string().default(""),
+    })
+    .nullable()
+    .optional(),
+  instructional_delivery: z
+    .object({
+      teacher_student_ratio: z.string().default("40% Direct / 60% Active Practice"),
+      methodology_notes: z.string().default(""),
+      step_by_step_tips: z.array(z.string()).default([]),
+    })
+    .nullable()
+    .optional(),
+});
+
+export type ZodAuditResponse = z.infer<typeof zodAuditResponseSchema>;

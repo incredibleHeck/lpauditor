@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "./firebase-admin";
-import { ADMIN_EMAILS, SCHOOL_EMAIL_DOMAIN } from "./constants";
+import { ADMIN_EMAILS, SCHOOL_EMAIL_DOMAIN, isInstitutionalEmail, isAdminEmail } from "./constants";
 
 export interface AuthenticatedUser {
   uid: string;
@@ -35,11 +35,11 @@ export async function getAuthenticatedUser(idToken?: string): Promise<Authentica
     const uid = decodedToken.uid;
     const email = (decodedToken.email || "").toLowerCase();
 
-    if (!email.endsWith(SCHOOL_EMAIL_DOMAIN)) {
-      throw new Error("Forbidden: Access is restricted exclusively to St. Adelaide International School accounts (@stadelaideschool.com).");
+    if (!isInstitutionalEmail(email)) {
+      throw new Error(`Forbidden: Access is restricted exclusively to St. Adelaide International School accounts (${SCHOOL_EMAIL_DOMAIN}).`);
     }
 
-    const isAdmin = ADMIN_EMAILS.includes(email);
+    const isAdmin = isAdminEmail(email);
     const profileDoc = await adminDb.collection("profiles").doc(uid).get();
     
     if (profileDoc.exists) {
@@ -68,7 +68,8 @@ export async function getAuthenticatedUser(idToken?: string): Promise<Authentica
       full_name: isAdmin ? "Admin User" : "Teacher",
     };
   } catch (err: unknown) {
-    console.error("Authentication verification failed:", err);
+    const { logger } = await import("./logger");
+    logger.error({ err }, "Authentication verification failed");
     if (err instanceof Error && err.message.includes("Forbidden")) {
       throw err;
     }

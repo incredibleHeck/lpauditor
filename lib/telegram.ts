@@ -1,3 +1,5 @@
+import { SCHOOL_NAME } from "./constants";
+
 /**
  * Telegram Bot API Integration Helper
  * Used to dispatch automated compliance notifications & defaulters list to school administrators.
@@ -84,7 +86,8 @@ export function formatDefaultersTelegramMessage(report: DefaulterReportData): st
   const { weekName, deadlineDate, totalTeachers, submittedCount, defaulterCount, defaulters } = report;
   const complianceRate = totalTeachers > 0 ? Math.round((submittedCount / totalTeachers) * 100) : 100;
 
-  let msg = `🚨 *LESSON PLAN DEFAULTERS REPORT*\n`;
+  let msg = `🚨 *${escapeMarkdown(SCHOOL_NAME)}*\n`;
+  msg += `📋 *LESSON PLAN DEFAULTERS REPORT*\n`;
   msg += `📅 *Target Period:* ${weekName}\n`;
   msg += `⏰ *Deadline:* ${deadlineDate}\n\n`;
 
@@ -95,7 +98,7 @@ export function formatDefaultersTelegramMessage(report: DefaulterReportData): st
   msg += `• Compliance Rate: *${complianceRate}%*\n\n`;
 
   if (defaulterCount === 0) {
-    msg += `🎉 *Great job! All teachers have submitted their lesson plans on time.*`;
+    msg += `🎉 *Great job! All faculty members have submitted their lesson plans on time.*`;
     return msg;
   }
 
@@ -124,6 +127,6 @@ export function formatDefaultersTelegramMessage(report: DefaulterReportData): st
 /**
  * Escapes Markdown special characters to prevent Telegram formatting errors.
  */
-function escapeMarkdown(text: string): string {
+export function escapeMarkdown(text: string): string {
   return text.replace(/[_*`\[\]()]/g, "\\$&");
 }

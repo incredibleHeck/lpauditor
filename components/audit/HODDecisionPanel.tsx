@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { ShieldCheck, Check, RotateCcw, UserCheck, Loader2, MessageSquare } from "lucide-react";
 import { updateSubmissionDecision } from "@/app/actions/submissions";
 import { toast } from "sonner";
@@ -62,6 +62,11 @@ export default function HODDecisionPanel({ submission, isHODOrAdmin, onDecisionU
     );
   }
 
+  const isApprovalBlocked = Boolean(
+    submission?.requires_resubmission || 
+    submission?.status === "RESUBMISSION_REQUIRED"
+  );
+
   return (
     <div className="p-5 bg-slate-50/70 border border-slate-200/80 rounded-2xl space-y-3.5 font-sans">
       <div className="flex items-center justify-between">
@@ -73,14 +78,26 @@ export default function HODDecisionPanel({ submission, isHODOrAdmin, onDecisionU
         )}
       </div>
 
+      {isApprovalBlocked && (
+        <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2">
+          <RotateCcw size={15} className="text-amber-700 shrink-0 mt-0.5" />
+          <p className="leading-relaxed">
+            <strong>Approval Gated:</strong> This lesson plan scored below the mandatory 70% compliance threshold. Sign-off is blocked until a revised plan scoring ≥ 70% is submitted.
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => handleSaveDecision("APPROVED")}
-          disabled={isSavingDecision}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all cursor-pointer ${
-            hodDecision === "APPROVED"
-              ? "bg-emerald-700 text-white shadow-2xs"
-              : "bg-white border border-slate-200 text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-200 shadow-2xs"
+          disabled={isSavingDecision || isApprovalBlocked}
+          title={isApprovalBlocked ? "Cannot approve: Plan scored below 70% compliance threshold" : undefined}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
+            isApprovalBlocked
+              ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60"
+              : hodDecision === "APPROVED"
+              ? "bg-emerald-700 text-white shadow-2xs cursor-pointer"
+              : "bg-white border border-slate-200 text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-200 shadow-2xs cursor-pointer"
           }`}
         >
           <Check size={13} /> Approve Plan

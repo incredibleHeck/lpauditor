@@ -7,8 +7,8 @@ import { signOut } from "firebase/auth";
 import LessonPlanDropzone from "./LessonPlanDropzone";
 import SubmissionsDashboard from "./SubmissionsDashboard";
 import HODDashboard from "./HODDashboard";
-import { BookOpen, LogOut, Shield, UserCheck, CheckCircle2, Sparkles, FileCheck, Layers } from "lucide-react";
-import type { Submission, UserProfile } from "@/lib/types";
+import { BookOpen, LogOut, Shield, UserCheck, CheckCircle2, FileCheck } from "lucide-react";
+import type { Submission, UserProfile, SubmissionContext } from "@/lib/types";
 
 interface DashboardPageContentProps {
   initialSubmissions: Submission[];
@@ -22,14 +22,17 @@ export default function DashboardPageContent({
   profile,
 }: DashboardPageContentProps) {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [revisionTarget, setRevisionTarget] = useState<SubmissionContext | null>(null);
   const router = useRouter();
 
   const handleUploadSuccess = () => {
     setRefreshTrigger((prev) => prev + 1);
+    setRevisionTarget(null);
   };
 
   const handleSignOut = async () => {
     await signOut(auth);
+    await fetch("/api/auth/session", { method: "DELETE" });
     router.push("/auth/login");
     router.refresh();
   };
@@ -119,14 +122,27 @@ export default function DashboardPageContent({
               {/* Left Column: Upload Submission Form */}
               <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs space-y-6">
                 <div>
-                  <h2 className="text-base font-bold text-slate-900 tracking-tight">Submit Weekly Lesson Plan</h2>
+                  <h2 className="text-base font-bold text-slate-900 tracking-tight">
+                    {revisionTarget ? "Submit Lesson Plan Revision" : "Submit Weekly Lesson Plan"}
+                  </h2>
                   <p className="text-xs text-slate-500 mt-1">
-                    Upload your lesson plan document to initialize automated Cambridge pedagogical compliance auditing.
+                    {revisionTarget 
+                      ? `Uploading revision for ${revisionTarget.week_name} ${revisionTarget.subject} (${revisionTarget.grade_level}).`
+                      : "Upload your lesson plan document to initialize automated Cambridge pedagogical compliance auditing."
+                    }
                   </p>
                 </div>
                 
                 {/* Dropzone Component */}
-                <LessonPlanDropzone onUploadSuccess={handleUploadSuccess} />
+                <LessonPlanDropzone 
+                  onUploadSuccess={handleUploadSuccess}
+                  initialSubject={revisionTarget?.subject}
+                  initialGradeLevel={revisionTarget?.grade_level}
+                  initialWeekName={revisionTarget?.week_name}
+                  parentSubmissionId={revisionTarget?.id}
+                  parentVersion={revisionTarget?.version || 1}
+                  onCancelRevision={() => setRevisionTarget(null)}
+                />
               </div>
 
               {/* Right Column: Cambridge Standards Info Card */}
@@ -170,7 +186,12 @@ export default function DashboardPageContent({
               <SubmissionsDashboard
                 initialSubmissions={initialSubmissions}
                 teacherId={teacherId}
+                teacherName={teacherName}
                 refreshTrigger={refreshTrigger}
+                onRequestRevision={(sub) => {
+                  setRevisionTarget(sub);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
               />
             </div>
           </>

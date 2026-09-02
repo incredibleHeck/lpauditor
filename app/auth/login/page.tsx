@@ -3,15 +3,24 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { BookOpen, Mail, Lock, ArrowRight, Loader2, AlertCircle, ShieldCheck } from "lucide-react";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import { BookOpen, Mail, Lock, ArrowRight, Loader2, AlertCircle, ShieldCheck, KeyRound, X, CheckCircle } from "lucide-react";
 import Link from "next/link";
+import { isInstitutionalEmail, SCHOOL_EMAIL_DOMAIN } from "@/lib/constants";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  
+  // Forgot Password modal states
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [isResetLoading, setIsResetLoading] = useState(false);
+  const [resetSuccessMsg, setResetSuccessMsg] = useState("");
+  const [resetErrorMsg, setResetErrorMsg] = useState("");
+
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -21,8 +30,8 @@ export default function LoginPage() {
 
     try {
       const cleanEmail = email.trim().toLowerCase();
-      if (!cleanEmail.endsWith("@stadelaideschool.com")) {
-        setErrorMsg("Access Restricted: Only official St. Adelaide International School accounts (@stadelaideschool.com) are permitted.");
+      if (!isInstitutionalEmail(cleanEmail)) {
+        setErrorMsg(`Access Restricted: Only official St. Adelaide International School accounts (${SCHOOL_EMAIL_DOMAIN}) are permitted.`);
         setIsLoading(false);
         return;
       }
@@ -30,7 +39,7 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, password);
       const userEmail = (userCredential.user.email || "").toLowerCase();
 
-      if (!userEmail.endsWith("@stadelaideschool.com")) {
+      if (!isInstitutionalEmail(userEmail)) {
         await auth.signOut();
         setErrorMsg("Access Restricted: Your email domain is not authorized for St. Adelaide International School.");
         setIsLoading(false);
@@ -49,6 +58,29 @@ export default function LoginPage() {
       setErrorMsg(err instanceof Error ? err.message : "Invalid email address or password.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsResetLoading(true);
+    setResetErrorMsg("");
+    setResetSuccessMsg("");
+
+    try {
+      const cleanEmail = resetEmail.trim().toLowerCase();
+      if (!isInstitutionalEmail(cleanEmail)) {
+        setResetErrorMsg(`Access Restricted: Password reset requires an official St. Adelaide International School account (${SCHOOL_EMAIL_DOMAIN}).`);
+        setIsResetLoading(false);
+        return;
+      }
+
+      await sendPasswordResetEmail(auth, cleanEmail);
+      setResetSuccessMsg("Password reset email sent! Please check your institutional inbox for instructions.");
+    } catch (err: unknown) {
+      setResetErrorMsg(err instanceof Error ? err.message : "Failed to dispatch password reset email. Please verify the address.");
+    } finally {
+      setIsResetLoading(false);
     }
   };
 
@@ -119,9 +151,23 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label htmlFor="password" className="block text-xs font-semibold text-slate-700">
-                Password
-              </label>
+              <div className="flex items-center justify-between">
+                <label htmlFor="password" className="block text-xs font-semibold text-slate-700">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetEmail(email);
+                    setResetSuccessMsg("");
+                    setResetErrorMsg("");
+                    setShowResetModal(true);
+                  }}
+                  className="text-xs text-slate-500 hover:text-slate-900 font-medium underline-offset-2 hover:underline cursor-pointer"
+                >
+                  Forgot password?
+                </button>
+              </div>
               <div className="relative rounded-lg shadow-2xs">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                   <Lock size={16} />
@@ -176,6 +222,81 @@ export default function LoginPage() {
           © 2026 St. Adelaide International School • Powered by HecTech LPAuditor
         </p>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="relative w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-xl p-6 sm:p-8 space-y-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
+                <KeyRound size={18} className="text-slate-800" />
+                Reset Faculty Password
+              </div>
+              <button
+                onClick={() => setShowResetModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Enter your official St. Adelaide International School email address to receive a secure password reset link.
+            </p>
+
+            {resetSuccessMsg && (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5 text-emerald-800 text-xs leading-relaxed">
+                <CheckCircle className="shrink-0 text-emerald-600 mt-0.5" size={16} />
+                <p>{resetSuccessMsg}</p>
+              </div>
+            )}
+
+            {resetErrorMsg && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-rose-800 text-xs leading-relaxed">
+                <AlertCircle className="shrink-0 text-rose-600 mt-0.5" size={16} />
+                <p>{resetErrorMsg}</p>
+              </div>
+            )}
+
+            <form onSubmit={handlePasswordReset} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-slate-700">School Email</label>
+                <div className="relative rounded-lg shadow-2xs">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Mail size={16} />
+                  </div>
+                  <input
+                    type="email"
+                    required
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="name@stadelaideschool.com"
+                    className="block w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 text-xs outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowResetModal(false)}
+                  className="px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition-all cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  disabled={isResetLoading}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {isResetLoading ? <Loader2 className="animate-spin" size={14} /> : <Mail size={14} />}
+                  <span>Send Reset Link</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

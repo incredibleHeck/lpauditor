@@ -1,5 +1,5 @@
 import { adminDb } from "./firebase-admin";
-import { NON_TEACHING_ADMIN_EMAILS } from "./constants";
+import { NON_TEACHING_ADMIN_EMAILS, WEEK_OPTIONS } from "./constants";
 import { DefaulterReportData, DefaulterItem } from "./telegram";
 
 /**
@@ -79,14 +79,16 @@ export async function getDefaultersReportForWeek(
 }
 
 /**
- * Returns current week label (e.g. "Week 5 - Term 1" or current calendar week).
+ * Returns current academic week label (e.g. "Week 1", "Week 2", ..., "Week 14").
  */
 export function getCurrentWeekLabel(): string {
   const now = new Date();
   const startOfYear = new Date(now.getFullYear(), 0, 1);
   const pastDaysOfYear = (now.getTime() - startOfYear.getTime()) / 86400000;
-  const weekNum = Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
-  return `Week ${weekNum}`;
+  const rawWeekNum = Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
+  // Map calendar week to term academic week (1 to 14)
+  const academicWeekIndex = ((rawWeekNum - 1) % WEEK_OPTIONS.length);
+  return WEEK_OPTIONS[academicWeekIndex] || WEEK_OPTIONS[0];
 }
 
 /**

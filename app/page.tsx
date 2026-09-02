@@ -8,7 +8,7 @@ import { doc, getDoc } from "firebase/firestore";
 import DashboardPageContent from "@/components/DashboardPageContent";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Loader2, BookOpen } from "lucide-react";
-import { SCHOOL_EMAIL_DOMAIN } from "@/lib/constants";
+import { isInstitutionalEmail } from "@/lib/constants";
 import type { UserProfile } from "@/lib/types";
 
 export default function Home() {
@@ -25,7 +25,7 @@ export default function Home() {
       }
 
       const userEmail = (user.email || "").toLowerCase();
-      if (!userEmail.endsWith(SCHOOL_EMAIL_DOMAIN)) {
+      if (!isInstitutionalEmail(userEmail)) {
         await auth.signOut();
         router.push("/auth/login");
         return;

@@ -137,7 +137,7 @@ export function ChatPanel({ submissionId, flags }: ChatPanelProps) {
                 }
                 className="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-medium rounded-lg border border-slate-200 shadow-2xs cursor-pointer"
               >
-                Boost high cognitive demand (Bloom's)
+                Boost high cognitive demand (Bloom&apos;s)
               </button>
             </div>
           </div>

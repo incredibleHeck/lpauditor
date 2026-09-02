@@ -82,5 +82,112 @@ export const CAMBRIDGE_SUBJECT_GUIDES: Record<string, string> = {
 - **Spatial Awareness**: Must involve the use of maps, atlases, globes, or digital mapping.
 - **Human-Physical Interaction**: Should explore the relationship between physical environments and human activity.
 - **Fieldwork/Data**: Where applicable, inclusion of collecting, analyzing, or interpreting geographical data.
+`,
+  "ICT & Computing": `
+=== ICT & COMPUTING YARDSTICK ===
+- **Computational Thinking**: Must integrate decomposition, pattern recognition, abstraction, or algorithm design.
+- **Hands-On Application**: Direct interactive coding, software tool manipulation, or digital safety evaluation.
+- **E-Safety & Ethics**: Explicit reinforcement of responsible technology use and digital citizenship.
+`,
+  "French": `
+=== FRENCH LANGUAGE YARDSTICK ===
+- **Four Skills Integration**: Balanced engagement across Listening, Speaking, Reading, and Writing.
+- **Target Language Immersion**: Maximized communicative use of French with structured scaffolding for beginners.
+- **Grammar & Cultural Context**: Contextualized grammatical patterns linked to Francophone cultural awareness.
+`,
+  "Art & Design": `
+=== ART & DESIGN YARDSTICK ===
+- **Creative Exploration**: Hands-on experimentation with media, color theory, texture, and artistic techniques.
+- **Critical Reflection**: Structured student evaluation of their own work and analysis of diverse artist exemplars.
+- **Skill Progression**: Clear progression from guided artistic demonstration to independent creative synthesis.
+`,
+  "Music": `
+=== MUSIC YARDSTICK ===
+- **Active Musician Participation**: Core focus on performing (vocal/instrumental), composing, or active listening.
+- **Musical Literacy**: Development of notation, rhythm, pitch, and timbre vocabulary.
+- **Aural Analysis**: Guided listening exercises exploring diverse musical genres and cultural traditions.
+`,
+  "Physical Education": `
+=== PHYSICAL EDUCATION YARDSTICK ===
+- **Active Movement Time**: High percentage of lesson time spent in moderate-to-vigorous physical activity.
+- **Skill Mastery & Safety**: Progressive motor skill drills, clear safety protocols, and spatial awareness rules.
+- **Sportsmanship & Teamwork**: Intentional focus on fair play, peer encouragement, leadership, and reflection.
 `
 };
+
+/**
+ * Universal Pedagogical Fallback Rubric for non-Cambridge or general subjects.
+ */
+export const GENERAL_PEDAGOGICAL_RUBRIC = `
+You are a Lead Pedagogical Auditor evaluating an educational lesson plan.
+Auditing against Universal Best-Practice Pedagogical Standards v2.1.
+
+=== UNIVERSAL PEDAGOGICAL AUDIT STANDARDS ===
+
+1. SMART LEARNING OUTCOMES
+- Clear, measurable, student-centered learning objectives using observable action verbs (e.g., "Demonstrate", "Contrast", "Construct", "Solve").
+- Avoid non-observable verbs ("Understand", "Familiarize").
+
+2. LEARNER ENGAGEMENT & CORE COMPETENCIES (0-100 Rating Each)
+- Critical Thinking & Problem Solving (Innovative)
+- Student Voice & Inquiry (Confident & Engaged)
+- Metacognitive Reflection & Plenary (Reflective)
+- Collaborative & Self-Directed Learning (Responsible)
+
+3. INCLUSIVE DIFFERENTIATION & SCAFFOLDING
+- Explicit tiering for Support (struggling / EAL learners), Core (grade-level learners), and Extension / G&T (advanced learners).
+- Targeted accommodations, visual organizers, and scaffolded questioning.
+
+4. FORMATIVE ASSESSMENT (AfL) & COGNITIVE DEMAND
+- Continuous checks for understanding, diagnostic starter tasks, and exit tickets.
+- Balanced Cognitive Demand across Bloom's Taxonomy: Low (Recall), Medium (Application), High (Analysis/Evaluation).
+
+5. TIME PACING & FEASIBILITY
+- Realistic timing distribution across Starter, Direct Instruction / Modeling, Active Practice, and Closure.
+- Total duration verification and pacing flow check.
+
+6. AGE & DEVELOPMENTAL SUITABILITY
+- Age-appropriate vocabulary, cognitive load, and task complexity.
+
+7. INSTRUCTIONAL DELIVERY ROADMAP
+- Step-by-step teacher modeling guidance vs student active inquiry balance.
+`;
+
+export interface PedagogicalRubricResult {
+  rubricPrompt: string;
+  rubricType: "CAMBRIDGE" | "GENERAL_PEDAGOGICAL";
+  subjectYardstick: string;
+  combinedInstruction: string;
+}
+
+/**
+ * Dynamically resolves the appropriate rubric (Cambridge with subject yardstick or General Pedagogical fallback).
+ */
+export function getPedagogicalRubric(subject?: string): PedagogicalRubricResult {
+  const safeSubject = (subject || "").trim();
+  const subjectGuide = CAMBRIDGE_SUBJECT_GUIDES[safeSubject];
+
+  if (subjectGuide) {
+    return {
+      rubricPrompt: CAMBRIDGE_RUBRIC_PROMPT,
+      rubricType: "CAMBRIDGE",
+      subjectYardstick: subjectGuide,
+      combinedInstruction: `${CAMBRIDGE_RUBRIC_PROMPT}\n\n${subjectGuide}`,
+    };
+  }
+
+  // Fallback to general pedagogical rubric for non-Cambridge or custom subjects
+  const fallbackYardstick = `
+=== GENERAL SUBJECT PEDAGOGY YARDSTICK (${safeSubject || "General Subject"}) ===
+- **Disciplinary Vocabulary**: Explicit instruction and check of subject-specific key terms.
+- **Active Student Application**: Direct experiential, inquiry-driven, or problem-solving tasks.
+- **Formative Checking**: Explicit evidence of checking student understanding before independent work.
+`;
+
+  return {
+    rubricPrompt: GENERAL_PEDAGOGICAL_RUBRIC,
+    rubricType: "GENERAL_PEDAGOGICAL",
+    subjectYardstick: fallbackYardstick,
+    combinedInstruction: `${GENERAL_PEDAGOGICAL_RUBRIC}\n\n${fallbackYardstick}`,
+  };
+}

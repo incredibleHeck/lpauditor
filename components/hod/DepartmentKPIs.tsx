@@ -19,7 +19,7 @@ interface DepartmentKPIsProps {
 export default function DepartmentKPIs({ stats, loading }: DepartmentKPIsProps) {
   const avg = stats?.averageScore || 0;
   const isHigh = avg >= 80;
-  const isMid = avg >= 50;
+  const isMid = avg >= 70;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-sans">
@@ -35,7 +35,7 @@ export default function DepartmentKPIs({ stats, loading }: DepartmentKPIsProps) 
         </div>
         <div className={`p-3 rounded-xl border shrink-0 ${
           isHigh ? "bg-emerald-50 border-emerald-100 text-emerald-700" :
-          isMid ? "bg-amber-50 border-amber-100 text-amber-700" :
+          isMid ? "bg-indigo-50 border-indigo-100 text-indigo-700" :
           "bg-rose-50 border-rose-100 text-rose-700"
         }`}>
           <Award size={22} />
@@ -71,7 +71,7 @@ export default function DepartmentKPIs({ stats, loading }: DepartmentKPIsProps) 
               {loading ? "…" : stats?.underperformingCount || 0}
             </span>
           </div>
-          <p className="text-[11px] text-slate-500">Scored below 50% compliance threshold</p>
+          <p className="text-[11px] text-slate-500">Scored below 70% passing threshold</p>
         </div>
         <div className={`p-3 rounded-xl border shrink-0 ${
           (stats?.underperformingCount || 0) > 0 ? "bg-rose-50 border-rose-100 text-rose-700" : "bg-slate-100 border-slate-200/70 text-slate-400"

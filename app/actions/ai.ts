@@ -4,9 +4,15 @@ import { adminDb } from "@/lib/firebase-admin";
 import { getAuthenticatedUser } from "@/lib/auth-helpers";
 import { getGeminiClient } from "@/lib/gemini";
 import { fetchAuditsForSubmissions } from "./submissions";
+import { SCORE_PASSING_THRESHOLD } from "@/lib/constants";
+import { logger } from "@/lib/logger";
+import { 
+  chatWithAuditorSchema, 
+  departmentAnalyticsSchema
+} from "@/lib/schemas/actionSchemas";
 
 /**
- * Handle multi-turn pedagogical chat with Gemini 3.6 Flash using audit findings.
+ * Handle multi-turn pedagogical chat with Gemini 3.7 Flash using audit findings.
  */
 export async function chatWithAuditor(
   submissionId: string,
@@ -14,6 +20,12 @@ export async function chatWithAuditor(
   userMessage: string
 ) {
   try {
+    const parsed = chatWithAuditorSchema.safeParse({ submissionId, history, userMessage });
+    if (!parsed.success) {
+      const errorMsg = parsed.error.issues.map((i) => i.message).join(", ");
+      return { success: false, error: `Validation Error: ${errorMsg}` };
+    }
+
     const user = await getAuthenticatedUser();
     const doc = await adminDb.collection("submissions").doc(submissionId).get();
     if (!doc.exists) {
@@ -82,26 +94,29 @@ Use this context to guide the teacher. When they ask questions, provide clear, a
 
     return { success: true, reply };
   } catch (err: unknown) {
-    console.error("Chat with auditor action failed:", err);
+    logger.error({ err, submissionId }, "Chat with auditor action failed");
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }
 
 /**
- * Generates statistics and a weekly brief/synthesis for HOD view using Gemini 3.6 Flash.
+ * Generates statistics and a weekly brief/synthesis for HOD view using Gemini 3.7 Flash.
  */
 export async function getDepartmentAnalytics(departmentFilter: string = "All") {
   try {
+    const parsed = departmentAnalyticsSchema.safeParse({ departmentFilter });
+    const targetDept = parsed.success ? parsed.data.departmentFilter : departmentFilter;
+
     const user = await getAuthenticatedUser();
-    if (user.role !== "ADMIN" && (user.role !== "HOD" || user.department !== departmentFilter)) {
-      throw new Error(`Forbidden: You are not authorized to view ${departmentFilter} department analytics.`);
+    if (user.role !== "ADMIN" && (user.role !== "HOD" || user.department !== targetDept)) {
+      throw new Error(`Forbidden: You are not authorized to view ${targetDept} department analytics.`);
     }
 
     let queryRef;
-    if (departmentFilter === "All" || departmentFilter === "All Departments") {
+    if (targetDept === "All" || targetDept === "All Departments") {
       queryRef = adminDb.collection("submissions");
     } else {
-      queryRef = adminDb.collection("submissions").where("subject", "==", departmentFilter);
+      queryRef = adminDb.collection("submissions").where("subject", "==", targetDept);
     }
     const snapshot = await queryRef.get();
 
@@ -128,7 +143,6 @@ export async function getDepartmentAnalytics(departmentFilter: string = "All") {
     const pendingCount = submissions.filter((sub) => sub.status === "PENDING" || sub.status === "PROCESSING").length;
     const failedCount = submissions.filter((sub) => sub.status === "FAILED").length;
 
-
     let averageScore = 0;
     let underperformingCount = 0;
     const allStrengths: string[] = [];
@@ -137,7 +151,7 @@ export async function getDepartmentAnalytics(departmentFilter: string = "All") {
     if (completedCount > 0) {
       const sum = completedAudits.reduce((acc, curr) => acc + Number(curr.score || 0), 0);
       averageScore = Math.round(sum / completedCount);
-      underperformingCount = completedAudits.filter((audit) => Number(audit.score || 0) < 50).length;
+      underperformingCount = completedAudits.filter((audit) => Number(audit.score || 0) < SCORE_PASSING_THRESHOLD).length;
 
       completedAudits.forEach((audit) => {
         if (Array.isArray(audit.strengths)) allStrengths.push(...audit.strengths);
@@ -150,7 +164,7 @@ export async function getDepartmentAnalytics(departmentFilter: string = "All") {
       const genAI = getGeminiClient();
       const model = genAI.getGenerativeModel({ model: "gemini-3.7-flash" });
 
-      const synthesisPrompt = `You are a Lead Pedagogical Auditor analyzing weekly lesson plans for the ${departmentFilter} department.
+      const synthesisPrompt = `You are a Lead Pedagogical Auditor analyzing weekly lesson plans for the ${targetDept} department.
 Here is a summary of the compliance audits for this week:
 - Total Completed Lesson Plans Audited: ${completedCount}
 - Average Compliance Score: ${averageScore}%
@@ -178,7 +192,7 @@ Provide a concise, professional 2-3 sentence executive synthesis for the Head of
       brief
     };
   } catch (err: unknown) {
-    console.error("Failed to generate department analytics:", err);
+    logger.error({ err, departmentFilter }, "Failed to generate department analytics");
     return { 
       success: false, 
       error: err instanceof Error ? err.message : "Unknown error",

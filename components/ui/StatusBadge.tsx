@@ -1,7 +1,5 @@
-"use client";
-
 import React from "react";
-import { CheckCircle2, Clock, Loader2, AlertCircle } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, AlertCircle, AlertTriangle } from "lucide-react";
 
 interface StatusBadgeProps {
   status: string | null;
@@ -11,6 +9,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
   const isPending = status === "PENDING";
   const isProcessing = status === "PROCESSING";
   const isCompleted = status === "COMPLETED";
+  const isResubmission = status === "RESUBMISSION_REQUIRED";
   const isFailed = status === "FAILED";
 
   if (isPending) {
@@ -33,6 +32,14 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold rounded-md">
         <CheckCircle2 size={12} className="text-emerald-700" /> Audited
+      </span>
+    );
+  }
+
+  if (isResubmission) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-800 text-[11px] font-semibold rounded-md">
+        <AlertTriangle size={12} className="text-rose-700" /> Resubmission Required
       </span>
     );
   }

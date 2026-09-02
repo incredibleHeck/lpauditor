@@ -10,6 +10,7 @@ export type Events = {
       subject: string;
       weekName: string;
       gradeLevel?: string;
+      teacherId: string;
     };
   };
   "defaulters.check": {

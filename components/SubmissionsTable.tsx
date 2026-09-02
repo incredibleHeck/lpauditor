@@ -45,6 +45,7 @@ export function SubmissionsTable({
               const isCompleted = sub.status === "COMPLETED";
               const isFailed = sub.status === "FAILED";
               const audit = getAuditFromSubmission(sub);
+              const version = sub.version || 1;
 
               return (
                 <tr key={sub.id} className="hover:bg-slate-50/60 transition-colors">
@@ -54,9 +55,16 @@ export function SubmissionsTable({
                         <FileText size={16} />
                       </div>
                       <div className="max-w-[170px] sm:max-w-xs overflow-hidden">
-                        <p className="font-semibold text-slate-900 truncate" title={filename}>
-                          {filename}
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-semibold text-slate-900 truncate" title={filename}>
+                            {filename}
+                          </p>
+                          {version > 1 && (
+                            <span className="shrink-0 px-1.5 py-0.5 text-[9px] font-mono font-bold rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              v{version}
+                            </span>
+                          )}
+                        </div>
                         <span className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5">
                           <Calendar size={11} /> {formatDate(sub.created_at)}
                         </span>

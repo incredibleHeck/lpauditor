@@ -15,8 +15,12 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data;
     }
 
+    function isDesignatedAdminEmail(email) {
+      return email.matches('(theodorahammond|hectoraryiku|abigailsackey)@stadelaideschool\\.com$');
+    }
+
     function isAdmin() {
-      return isAuthenticated() && getUserData().role == 'ADMIN';
+      return isAuthenticated() && (getUserData().role == 'ADMIN' || isDesignatedAdminEmail(request.auth.token.email));
     }
 
     function isHODForSubject(subject) {
@@ -31,8 +35,11 @@ service cloud.firestore {
     // Profiles Collection
     match /profiles/{userId} {
       allow read: if isAuthenticated();
-      // Allow initial profile creation by owner, but forbid modifying role/department on update
-      allow create: if isOwner(userId);
+      // Allow initial profile creation by owner: regular users must default to TEACHER role, designated admins can be ADMIN
+      allow create: if isOwner(userId) && (
+        request.resource.data.role == 'TEACHER' ||
+        (request.resource.data.role == 'ADMIN' && isDesignatedAdminEmail(request.auth.token.email))
+      );
       allow update: if isOwner(userId) && 
         request.resource.data.role == resource.data.role &&
         request.resource.data.department == resource.data.department;
@@ -58,8 +65,8 @@ service cloud.firestore {
     match /ai_audits/{auditId} {
       // Only allow reading if user owns the parent submission or is HOD for its subject
       allow read: if isAuthenticated() && (
-        getSubmission(resource.data.submission_id).teacher_id == request.auth.uid ||
-        isHODForSubject(getSubmission(resource.data.submission_id).subject) ||
+        resource.data.teacher_id == request.auth.uid ||
+        isHODForSubject(resource.data.subject) ||
         isAdmin()
       );
       allow write: if false; // Written exclusively server-side via Firebase Admin SDK

@@ -1,6 +1,7 @@
 import React from "react";
 import { DefaulterReportData } from "@/lib/telegram";
 import { CalendarClock, RefreshCw, Send, Loader2, UserX, CheckCircle2 } from "lucide-react";
+import { WEEK_OPTIONS } from "@/lib/constants";
 
 interface DefaultersPanelProps {
   report: DefaulterReportData | null;
@@ -8,6 +9,8 @@ interface DefaultersPanelProps {
   onRefresh: () => void;
   onSendAlert: () => void;
   isDispatching: boolean;
+  selectedWeek?: string;
+  onWeekChange?: (week: string) => void;
 }
 
 export default function DefaultersPanel({
@@ -15,11 +18,15 @@ export default function DefaultersPanel({
   loading,
   onRefresh,
   onSendAlert,
-  isDispatching
+  isDispatching,
+  selectedWeek,
+  onWeekChange
 }: DefaultersPanelProps) {
   const complianceRate = report && report.totalTeachers > 0
     ? Math.round((report.submittedCount / report.totalTeachers) * 100)
     : 100;
+
+  const currentWeek = selectedWeek || report?.weekName || WEEK_OPTIONS[0];
 
   return (
     <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-5 font-sans">
@@ -32,7 +39,7 @@ export default function DefaultersPanel({
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-slate-900">Submission Deadlines & Defaulter Tracking</h3>
               <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-mono font-semibold rounded-md uppercase">
-                {report?.weekName || "Current Week"}
+                {report?.weekName || currentWeek}
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -41,7 +48,21 @@ export default function DefaultersPanel({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {onWeekChange && (
+            <div className="flex items-center gap-1">
+              <select
+                value={currentWeek}
+                onChange={(e) => onWeekChange(e.target.value)}
+                className="px-2.5 py-1.5 bg-white border border-slate-200 text-slate-800 text-xs font-semibold rounded-lg shadow-2xs cursor-pointer outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900"
+              >
+                {WEEK_OPTIONS.map((w) => (
+                  <option key={w} value={w}>{w}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <button
             onClick={onRefresh}
             disabled={loading}

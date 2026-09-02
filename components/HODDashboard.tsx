@@ -55,22 +55,23 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
   const [loadingAnalytics, setLoadingAnalytics] = useState(true);
 
   // Defaulters & Telegram Reporting States
+  const [selectedWeek, setSelectedWeek] = useState<string>("Week 1");
   const [defaulterReport, setDefaulterReport] = useState<DefaulterReportData | null>(null);
   const [loadingDefaulters, setLoadingDefaulters] = useState(true);
   const [dispatchingTelegram, setDispatchingTelegram] = useState(false);
 
-  const fetchDefaulters = useCallback(async (deptToUse = selectedDepartment) => {
+  const fetchDefaulters = useCallback(async (deptToUse = selectedDepartment, weekToUse = selectedWeek) => {
     setLoadingDefaulters(true);
-    const res = await getDefaultersReportAction(undefined, deptToUse);
+    const res = await getDefaultersReportAction(weekToUse, deptToUse);
     if (res.success && res.data) {
       setDefaulterReport(res.data);
     }
     setLoadingDefaulters(false);
-  }, [selectedDepartment]);
+  }, [selectedDepartment, selectedWeek]);
 
   const handleSendTelegramAlert = async () => {
     setDispatchingTelegram(true);
-    const res = await triggerTelegramDefaulterReportAction(undefined, selectedDepartment);
+    const res = await triggerTelegramDefaulterReportAction(selectedWeek, selectedDepartment);
     if (res.success) {
       if (res.telegramResult?.success) {
         toast.success("Telegram defaulters report successfully sent to administrators!");
@@ -104,7 +105,7 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
       setLoadingAnalytics(true);
       setLoadingDefaulters(true);
       const res = await getDepartmentAnalytics(selectedDepartment);
-      const defRes = await getDefaultersReportAction(undefined, selectedDepartment);
+      const defRes = await getDefaultersReportAction(selectedWeek, selectedDepartment);
       const subRes = await getDepartmentSubmissions(selectedDepartment);
 
       if (active && res.success && res.stats) {
@@ -128,7 +129,7 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
     return () => {
       active = false;
     };
-  }, [selectedDepartment, refreshTrigger]);
+  }, [selectedDepartment, selectedWeek, refreshTrigger]);
 
   const reloadSubmissions = useCallback(async () => {
     if (!department) return;
@@ -137,12 +138,6 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
       setSubmissions(res.data as Submission[]);
     }
   }, [department]);
-
-  useEffect(() => {
-    if (refreshTrigger > 0) {
-      void reloadSubmissions();
-    }
-  }, [refreshTrigger, reloadSubmissions]);
 
   // Realtime Cloud Firestore listener for department
   useEffect(() => {
@@ -316,6 +311,11 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
         onRefresh={() => fetchDefaulters()}
         onSendAlert={handleSendTelegramAlert}
         isDispatching={dispatchingTelegram}
+        selectedWeek={selectedWeek}
+        onWeekChange={(week) => {
+          setSelectedWeek(week);
+          fetchDefaulters(selectedDepartment, week);
+        }}
       />
 
       {/* Search & Filter Toolbar */}
@@ -388,6 +388,7 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
         submission={selectedSubmission}
         fileName={selectedSubmission ? getFileName(selectedSubmission.file_url) : ""}
         userRole="HOD"
+        teacherName={selectedSubmission?.profiles?.full_name || "Faculty Member"}
         onDecisionUpdated={() => reloadSubmissions()}
       />
     </div>
