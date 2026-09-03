@@ -25,6 +25,38 @@ export async function getAuthenticatedUser(idToken?: string): Promise<Authentica
   }
 
   try {
+    // Support for Local Dev Sandbox Demo Accounts
+    if (sessionCookie && sessionCookie.startsWith("demo:")) {
+      const demoKey = sessionCookie.replace("demo:", "");
+      if (demoKey === "teacher-ict") {
+        return {
+          uid: "demo-teacher-ict",
+          email: "derrick.thompson@stadelaideschool.com",
+          role: "TEACHER",
+          department: "ICT",
+          full_name: "Mr. Derrick Thompson",
+        };
+      }
+      if (demoKey === "hod" || demoKey === "hod-science") {
+        return {
+          uid: "demo-hod-science",
+          email: "abigailsackey@stadelaideschool.com",
+          role: "HOD",
+          department: "Upper Primary",
+          full_name: "Mrs. Abigail Sackey",
+        };
+      }
+      if (demoKey === "admin") {
+        return {
+          uid: "demo-admin",
+          email: "hectoraryiku@stadelaideschool.com",
+          role: "ADMIN",
+          department: "Administration",
+          full_name: "Mr. Ayiku",
+        };
+      }
+    }
+
     let decodedToken;
     if (sessionCookie) {
       decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);

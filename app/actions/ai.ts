@@ -115,6 +115,27 @@ export async function getDepartmentAnalytics(departmentFilter: string = "All") {
     const user = await getAuthenticatedUser();
     const isDivision = Boolean(DIVISION_CLASSES[targetDept]);
 
+    // Sandbox Local Demo Handling
+    if (user.uid.startsWith("demo-")) {
+      return {
+        success: true,
+        data: {
+          department: targetDept,
+          metrics: {
+            totalSubmissions: 2,
+            completedAudits: 2,
+            pendingAudits: 0,
+            failedAudits: 0,
+            averageScore: 76.5,
+            passingSubmissions: 1,
+            failingSubmissions: 1,
+            passRate: 50,
+          },
+          summary: "Upper Primary ICT department demonstrates strong adherence to Cambridge lower secondary computing frameworks. Year 7 lesson planning features exemplary inquiry and learner attributes, while Year 8 requires scaffolding on relational database queries.",
+        },
+      };
+    }
+
     if (user.role !== "ADMIN" && (user.role !== "HOD" || user.department !== targetDept)) {
       throw new Error(`Forbidden: You are not authorized to view ${targetDept} department analytics.`);
     }

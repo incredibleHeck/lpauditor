@@ -181,15 +181,28 @@ export default function HODDashboard({
       return;
     }
 
-    const sanitizeCSVField = (val: string) => {
-      let clean = (val || "").replace(/[\r\n]+/g, " ");
-      if (/^[=+\-@\t\r]/.test(clean)) {
+    // Neutralize CSV formula injection (Finding SEC-05)
+    const sanitizeCSVField = (val: unknown): string => {
+      if (val === null || val === undefined) return '""';
+      let clean = String(val).replace(/[\r\n]+/g, " ").trim();
+      // If cell begins with =, +, -, @, \t, \r, |, or %, prepend a single quote to disarm formula execution
+      if (/^[=+\-@\t\r|%]/.test(clean)) {
         clean = `'${clean}`;
       }
       return `"${clean.replace(/"/g, '""')}"`;
     };
 
-    const headers = ["Teacher Name", "Subject", "Grade Level", "Week", "Audit Status", "HOD Decision", "Compliance Score %", "Submitted Date"];
+    const headers = [
+      "Teacher Name",
+      "Subject Department",
+      "Grade Level",
+      "Teaching Week",
+      "Audit Status",
+      "HOD Decision",
+      "Compliance Score %",
+      "Submission Date"
+    ];
+
     const rows = filteredSubmissions.map((sub) => {
       const audit = getAuditFromSubmission(sub);
       const score = audit?.score !== undefined && audit?.score !== null ? `${audit.score}%` : "N/A";
@@ -209,15 +222,15 @@ export default function HODDashboard({
       ].join(",");
     });
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows].join("\n");
-    const encodedUri = encodeURI(csvContent);
+    // Prepend UTF-8 BOM so Excel properly interprets characters
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + encodeURIComponent([headers.join(","), ...rows].join("\r\n"));
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${selectedDepartment.replace(/\s+/g, "_")}_Compliance_Report.csv`);
+    link.setAttribute("href", csvContent);
+    link.setAttribute("download", `St_Adelaide_${selectedDepartment.replace(/\s+/g, "_")}_Compliance_Report.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success("Department CSV compliance report downloaded!");
+    toast.success("Secured department CSV report downloaded!");
   };
 
   const handleViewAudit = (sub: Submission) => {
@@ -254,13 +267,18 @@ export default function HODDashboard({
 
   return (
     <div className="space-y-6 font-sans">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200/80 pb-4 gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200/90 pb-4 gap-3">
         <div>
-          <h2 className="text-base font-bold text-slate-900 tracking-tight">
-            {selectedDepartment === "All Departments" ? "School-Wide Compliance" : `${selectedDepartment} Department`}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-bold text-[#0B132B] tracking-tight">
+              {selectedDepartment === "All Departments" ? "School-Wide Governance & Audit" : `${selectedDepartment} Governance`}
+            </h2>
+            <span className="px-2 py-0.5 bg-[#0B132B] text-white text-[10px] font-mono font-bold rounded-md uppercase tracking-wider">
+              Cambridge v2.1
+            </span>
+          </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Audit results, pedagogical trends, and weekly submission oversight across St. Adelaide International School.
+            Institutional oversight, rubric evaluations, and weekly quota compliance for St. Adelaide International School.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -268,7 +286,7 @@ export default function HODDashboard({
             value={selectedDepartment}
             onChange={(e) => setSelectedDepartment(e.target.value)}
             disabled={!isAdmin && Boolean(department && department !== "Administration" && department !== "All Departments")}
-            className="px-3 py-1.5 bg-white border border-slate-200 text-slate-900 text-xs font-semibold rounded-lg shadow-2xs outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 cursor-pointer disabled:bg-slate-50 disabled:cursor-not-allowed"
+            className="px-3 py-2 bg-white border border-slate-200 text-[#0B132B] text-xs font-semibold rounded-xl shadow-2xs outline-none focus:ring-2 focus:ring-[#0B132B]/15 focus:border-[#0B132B] cursor-pointer disabled:bg-slate-50 disabled:cursor-not-allowed"
           >
             {isAdmin ? (
               <>
@@ -302,11 +320,11 @@ export default function HODDashboard({
 
           <button
             onClick={exportToCSV}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-lg shadow-2xs transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-slate-900/20 active:scale-[0.99]"
+            className="flex items-center gap-1.5 px-3 py-2 bg-[#0B132B] hover:bg-slate-800 text-white font-semibold text-xs rounded-xl shadow-xs transition-all tactile-btn cursor-pointer focus-visible:ring-2 focus-visible:ring-slate-900/20"
           >
             <Download size={13} /> Export CSV
           </button>
-          <span className="px-2.5 py-1.5 bg-slate-100 border border-slate-200 text-slate-700 text-xs font-mono font-semibold rounded-lg">
+          <span className="px-3 py-2 bg-slate-100 border border-slate-200 text-slate-700 text-xs font-mono font-bold rounded-xl">
             {submissions.length} Total
           </span>
         </div>

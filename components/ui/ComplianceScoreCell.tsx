@@ -10,14 +10,14 @@ interface ComplianceScoreCellProps {
 
 export function ComplianceScoreCell({ score, isCompleted, isFailed }: ComplianceScoreCellProps) {
   if (isCompleted && score !== undefined && score !== null) {
-    const isExemplary = score >= 80;
-    const isModerate = score >= 50;
+    const isPass = score >= 70;
+    const isDeficit = score >= 50 && score < 70;
 
     return (
       <div className="flex items-center gap-2">
         <span
           className={`text-xs font-mono font-bold tabular-nums ${
-            isExemplary ? "text-emerald-700" : isModerate ? "text-amber-700" : "text-rose-700"
+            isPass ? "text-emerald-700" : isDeficit ? "text-amber-700" : "text-rose-700"
           }`}
         >
           {score}%
@@ -25,7 +25,7 @@ export function ComplianceScoreCell({ score, isCompleted, isFailed }: Compliance
         <div className="w-16 bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200/80">
           <div
             className={`h-full rounded-full transition-all duration-300 ${
-              isExemplary ? "bg-emerald-600" : isModerate ? "bg-amber-500" : "bg-rose-500"
+              isPass ? "bg-emerald-600" : isDeficit ? "bg-amber-500" : "bg-rose-600"
             }`}
             style={{ width: `${Math.min(100, Math.max(0, score))}%` }}
           />

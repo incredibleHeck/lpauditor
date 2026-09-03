@@ -1,17 +1,6 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "HecTech LPAuditor — Cambridge Pedagogical Compliance Platform",
@@ -26,16 +15,16 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className="h-full antialiased font-sans"
     >
-      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 selection:bg-slate-900 selection:text-white">
+      <body className="min-h-full flex flex-col bg-[#F8FAFC] text-[#0B132B] selection:bg-[#0B132B] selection:text-white font-sans">
         {children}
         <Toaster 
           position="top-right" 
           richColors 
           closeButton
           toastOptions={{
-            className: "text-xs font-medium border border-slate-200 shadow-sm",
+            className: "text-xs font-medium border border-slate-200 shadow-xs rounded-xl bg-white text-slate-900",
           }}
         />
       </body>

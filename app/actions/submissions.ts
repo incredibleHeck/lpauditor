@@ -43,6 +43,140 @@ export async function fetchAuditsForSubmissions(submissionIds: string[]): Promis
   return auditMap;
 }
 
+// In-Memory Store for Local Sandbox Testing
+const INITIAL_DEMO_SUBMISSIONS: any[] = [
+  {
+    id: "sub-ict-demo-1",
+    file_url: "https://stadelaideschool.com/curriculum/Year_7_ICT_Algorithms_Flowcharts_Week1.docx",
+    file_path: "lesson-plans/demo-teacher-ict/Year_7_ICT_Algorithms_Flowcharts_Week1.docx",
+    subject: "ICT",
+    week_name: "Week 1",
+    grade_level: "Year 7 (Streams A & B)",
+    status: "COMPLETED",
+    hod_decision: "APPROVED",
+    hod_feedback: "Exemplary plan. SMART verbs well-aligned to Cambridge lower secondary computing framework.",
+    teacher_id: "demo-teacher-ict",
+    profiles: {
+      full_name: "Mr. Derrick Thompson",
+      department: "ICT",
+    },
+    version: 1,
+    created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+    ai_audits: [
+      {
+        id: "audit-ict-1",
+        submission_id: "sub-ict-demo-1",
+        score: 88,
+        lesson_plan_count: 2,
+        rubric_type: "CAMBRIDGE",
+        time_compliance: {
+          is_compliant: true,
+          total_allocated_minutes: 90,
+          pacing_feedback: "Timing is well-structured: 15 min Starter (logic puzzle), 55 min Main (algorithm design & testing), 20 min Plenary recap.",
+        },
+        age_appropriateness: {
+          score: 92,
+          feedback: "Concepts of sequential logic and decision branching are well-matched to Year 7 cognitive development.",
+        },
+        instructional_delivery: {
+          teacher_student_ratio: "30/70 Student-Centered",
+          methodology_notes: "Guided inquiry followed by hands-on pair programming.",
+          step_by_step_tips: [
+            "Start with physical unplugged algorithm demonstration.",
+            "Use flow-chart symbol cards before screen-based work.",
+            "Challenge advanced students with nested condition loops."
+          ],
+        },
+        learner_attributes: {
+          confident: 85,
+          responsible: 90,
+          reflective: 88,
+          innovative: 92,
+          engaged: 89,
+        },
+        exam_command_verbs: ["Construct", "Trace", "Analyze", "Evaluate"],
+        cognitive_demand: {
+          low_recall: 20,
+          medium_application: 50,
+          high_evaluation: 30,
+        },
+        strengths: [
+          "Outstanding scaffolding for beginner coders using Cambridge visual syntax.",
+          "Clear assessment rubrics with success criteria for Foundation, Core, and Extension tiers."
+        ],
+        flags: [],
+      },
+    ],
+  },
+  {
+    id: "sub-ict-demo-2",
+    file_url: "https://stadelaideschool.com/curriculum/Year_8_ICT_Database_Queries_Week2.docx",
+    file_path: "lesson-plans/demo-teacher-ict/Year_8_ICT_Database_Queries_Week2.docx",
+    subject: "ICT",
+    week_name: "Week 2",
+    grade_level: "Year 8",
+    status: "COMPLETED",
+    hod_decision: "REVISION_REQUESTED",
+    hod_feedback: "Please add explicit scaffolding for Foundation students on SQL SELECT query syntax before moving to multi-table joins.",
+    teacher_id: "demo-teacher-ict",
+    profiles: {
+      full_name: "Mr. Derrick Thompson",
+      department: "ICT",
+    },
+    version: 1,
+    created_at: new Date(Date.now() - 86400000).toISOString(),
+    ai_audits: [
+      {
+        id: "audit-ict-2",
+        submission_id: "sub-ict-demo-2",
+        score: 65,
+        lesson_plan_count: 2,
+        rubric_type: "CAMBRIDGE",
+        time_compliance: {
+          is_compliant: true,
+          total_allocated_minutes: 80,
+          pacing_feedback: "Starter takes 10 mins, Main takes 60 mins, Plenary 10 mins.",
+        },
+        age_appropriateness: {
+          score: 80,
+          feedback: "Relational database concepts are suitable for Year 8.",
+        },
+        instructional_delivery: {
+          teacher_student_ratio: "50/50",
+          methodology_notes: "Teacher-led syntax demonstration followed by workstation tasks.",
+          step_by_step_tips: [
+            "Provide pre-populated database schemas to avoid data-entry fatigue.",
+            "Scaffold SQL commands with syntax coloring."
+          ],
+        },
+        learner_attributes: {
+          confident: 65,
+          responsible: 70,
+          reflective: 60,
+          innovative: 65,
+          engaged: 70,
+        },
+        exam_command_verbs: ["Identify", "Execute", "Modify"],
+        cognitive_demand: {
+          low_recall: 35,
+          medium_application: 50,
+          high_evaluation: 15,
+        },
+        strengths: [
+          "Practical real-world scenario (School Library Database).",
+          "Clear database design schema included."
+        ],
+        flags: [
+          "Score 65% is below the mandatory 70% threshold.",
+          "Differentiation section lacks explicit Foundation tier modifications."
+        ],
+      },
+    ],
+  },
+];
+
+const demoSubmissionsStore = [...INITIAL_DEMO_SUBMISSIONS];
+
 export async function submitLessonPlan(rawInput: SubmitLessonPlanInput) {
   try {
     const parsed = submitLessonPlanSchema.safeParse(rawInput);
@@ -69,6 +203,83 @@ export async function submitLessonPlan(rawInput: SubmitLessonPlanInput) {
     }
 
     let calculatedVersion = version || 1;
+
+    // Sandbox Local Demo Handling
+    if (teacherId.startsWith("demo-") || user.uid.startsWith("demo-")) {
+      if (parentSubmissionId) {
+        const parent = demoSubmissionsStore.find((s) => s.id === parentSubmissionId);
+        if (parent) {
+          calculatedVersion = (parent.version || 1) + 1;
+        }
+      }
+
+      const newSubId = `sub-ict-demo-${Date.now()}`;
+      const newSubmission = {
+        id: newSubId,
+        file_url: fileUrl,
+        file_path: filePath || fileUrl,
+        subject,
+        week_name: weekName,
+        teacher_id: teacherId,
+        status: "COMPLETED",
+        grade_level: gradeLevel,
+        parent_submission_id: parentSubmissionId || null,
+        version: calculatedVersion,
+        revision_notes: revisionNotes || null,
+        created_at: new Date().toISOString(),
+        profiles: {
+          full_name: user.full_name || "Mr. Derrick Thompson",
+          department: user.department || "ICT",
+        },
+        ai_audits: [
+          {
+            id: `audit-${newSubId}`,
+            submission_id: newSubId,
+            score: 87,
+            lesson_plan_count: 2,
+            rubric_type: "CAMBRIDGE",
+            time_compliance: {
+              is_compliant: true,
+              total_allocated_minutes: 90,
+              pacing_feedback: "Effective pacing across Starter, Main activity, and Plenary recap.",
+            },
+            age_appropriateness: {
+              score: 91,
+              feedback: `Content and cognitive load are appropriate for ${gradeLevel}.`,
+            },
+            instructional_delivery: {
+              teacher_student_ratio: "30/70 Student-Centered",
+              methodology_notes: "Guided inquiry followed by hands-on pair activities.",
+              step_by_step_tips: [
+                "Establish explicit success criteria with Cambridge rubrics.",
+                "Ensure differentiated Extension tasks are ready for rapid finishers."
+              ],
+            },
+            learner_attributes: {
+              confident: 88,
+              responsible: 90,
+              reflective: 85,
+              innovative: 89,
+              engaged: 92,
+            },
+            exam_command_verbs: ["Formulate", "Investigate", "Evaluate", "Demonstrate"],
+            cognitive_demand: {
+              low_recall: 20,
+              medium_application: 50,
+              high_evaluation: 30,
+            },
+            strengths: [
+              "Well-structured objectives aligning with Cambridge learning frameworks.",
+              "Comprehensive assessment rubrics across learning tiers."
+            ],
+            flags: [],
+          },
+        ],
+      };
+
+      demoSubmissionsStore.unshift(newSubmission);
+      return { success: true, submissionId: newSubId, version: calculatedVersion };
+    }
 
     // Handle revision linking if parentSubmissionId is present
     if (parentSubmissionId) {
@@ -128,6 +339,12 @@ export async function getUserSubmissions(teacherId: string) {
       throw new Error("Forbidden: Access to these submissions is restricted.");
     }
 
+    // Sandbox Local Demo Handling
+    if (teacherId.startsWith("demo-")) {
+      const filtered = demoSubmissionsStore.filter((s) => s.teacher_id === teacherId);
+      return { success: true, data: filtered };
+    }
+
     const snapshot = await adminDb
       .collection("submissions")
       .where("teacher_id", "==", teacherId)
@@ -160,6 +377,15 @@ export async function getUserSubmissions(teacherId: string) {
 export async function getSubmissionStatus(submissionId: string) {
   try {
     const user = await getAuthenticatedUser();
+
+    // Sandbox Local Demo Handling
+    if (submissionId.startsWith("sub-ict-demo")) {
+      const demoSub = demoSubmissionsStore.find((s) => s.id === submissionId);
+      if (demoSub) {
+        return { success: true, data: demoSub };
+      }
+    }
+
     const doc = await adminDb.collection("submissions").doc(submissionId).get();
     if (!doc.exists) {
       throw new Error("Submission not found.");
@@ -194,6 +420,11 @@ export async function getDepartmentSubmissions(department: string) {
   try {
     const user = await getAuthenticatedUser();
     const isDivision = Boolean(DIVISION_CLASSES[department]);
+
+    // Sandbox Local Demo Handling
+    if (user.uid.startsWith("demo-")) {
+      return { success: true, data: demoSubmissionsStore };
+    }
 
     if (user.role !== "ADMIN" && (user.role !== "HOD" || user.department !== department)) {
       throw new Error(`Forbidden: You are not authorized to view ${department} department submissions.`);
@@ -262,6 +493,23 @@ export async function updateSubmissionDecision(rawInput: UpdateSubmissionDecisio
     const { submissionId, decision, comments } = parsed.data;
 
     const user = await getAuthenticatedUser();
+
+    // Sandbox Local Demo Handling
+    if (submissionId.startsWith("sub-ict-demo")) {
+      const demoSub = demoSubmissionsStore.find((s) => s.id === submissionId);
+      if (demoSub) {
+        if (decision === "APPROVED") {
+          const score = demoSub.ai_audits?.[0]?.score || 0;
+          if (score < SCORE_PASSING_THRESHOLD) {
+            throw new Error(`Sign-off Blocked: This lesson plan scored below the mandatory ${SCORE_PASSING_THRESHOLD}% threshold. A revised plan must be submitted before approval.`);
+          }
+        }
+        demoSub.hod_decision = decision;
+        demoSub.hod_feedback = comments || null;
+        return { success: true };
+      }
+    }
+
     const doc = await adminDb.collection("submissions").doc(submissionId).get();
     if (!doc.exists) {
       throw new Error("Submission not found.");

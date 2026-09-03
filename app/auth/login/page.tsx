@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
-import { BookOpen, Mail, Lock, ArrowRight, Loader2, AlertCircle, ShieldCheck, KeyRound, X, CheckCircle } from "lucide-react";
+import { BookOpen, Mail, Lock, ArrowRight, Loader2, AlertCircle, ShieldCheck, KeyRound, X, CheckCircle, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { isInstitutionalEmail, SCHOOL_EMAIL_DOMAIN } from "@/lib/constants";
 
@@ -22,6 +22,28 @@ export default function LoginPage() {
   const [resetErrorMsg, setResetErrorMsg] = useState("");
 
   const router = useRouter();
+
+  const handleDemoLogin = async (demoUser: "teacher-ict" | "hod" | "admin") => {
+    setIsLoading(true);
+    setErrorMsg("");
+    try {
+      const res = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ demoUser }),
+      });
+      if (res.ok) {
+        router.push("/");
+        router.refresh();
+      } else {
+        setErrorMsg("Failed to initialize demo session.");
+      }
+    } catch (err) {
+      setErrorMsg("Error initiating demo session: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,27 +107,27 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         {/* Institutional Branding */}
         <div className="flex flex-col items-center text-center mb-8 space-y-2">
-          <div className="p-3 bg-slate-900 text-white rounded-2xl shadow-sm flex items-center justify-center">
-            <BookOpen size={28} />
+          <div className="w-14 h-14 bg-[#0B132B] text-white rounded-2xl shadow-xs border border-slate-800 flex items-center justify-center">
+            <BookOpen size={28} className="text-slate-100" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="text-2xl font-bold tracking-tight text-[#0B132B]">
               St. Adelaide International School
             </h1>
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">
-              HecTech LPAuditor • Cambridge Pedagogical Portal
+              Cambridge International Centre GH-924 • LPAuditor Portal
             </p>
           </div>
         </div>
 
         {/* Login Card */}
-        <div className="bg-white border border-slate-200/80 p-8 sm:p-10 rounded-2xl shadow-xs space-y-6">
+        <div className="bg-white border border-slate-200/90 p-8 sm:p-10 rounded-2xl shadow-xs space-y-6">
           <div className="space-y-1">
-            <h2 className="text-lg font-bold text-slate-900">Faculty Sign In</h2>
+            <h2 className="text-lg font-bold text-[#0B132B]">Faculty Sign In</h2>
             <p className="text-xs text-slate-500">
               Enter your institutional credentials to access your lesson plan compliance dashboard.
             </p>
@@ -190,7 +212,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-slate-900/20 active:scale-[0.99]"
+                className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-xl text-xs font-semibold text-white bg-[#0B132B] hover:bg-[#1C2541] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-[#0B132B]/20 tactile-btn"
               >
                 {isLoading ? (
                   <>
@@ -206,6 +228,108 @@ export default function LoginPage() {
               </button>
             </div>
           </form>
+
+          {/* Interactive Demo Sandbox / Quick Testing Accounts */}
+          <div className="pt-5 border-t border-slate-200/80 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#0B132B] uppercase tracking-wider">
+                <Sparkles size={14} className="text-amber-600" />
+                <span>Quick Testing Sandbox</span>
+              </div>
+              <span className="text-[10px] font-mono font-bold bg-[#0B132B] text-white px-2 py-0.5 rounded uppercase">
+                Instant Sign-In
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Select an institutional role to test the system with pre-configured Cambridge curriculum quotas:
+            </p>
+
+            <div className="grid grid-cols-1 gap-2.5">
+              {/* 1. ICT Teacher Demo Account */}
+              <button
+                type="button"
+                onClick={() => handleDemoLogin("teacher-ict")}
+                disabled={isLoading}
+                className="w-full flex items-center justify-between p-3 bg-[#F8FAFC] hover:bg-white hover:border-[#0B132B] border border-slate-200/90 rounded-xl transition-all tactile-btn text-left group shadow-2xs cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">
+                    ICT
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-[#0B132B] group-hover:text-indigo-900">
+                        Mr. Derrick Thompson
+                      </span>
+                      <span className="text-[10px] font-semibold text-slate-400 font-mono">
+                        (TEACHER)
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-mono">
+                      Department: ICT • Classes: Year 5, 6, 7 & 8
+                    </p>
+                  </div>
+                </div>
+                <ArrowRight size={14} className="text-slate-400 group-hover:text-[#0B132B] group-hover:translate-x-0.5 transition-transform" />
+              </button>
+
+              {/* 2. HOD Demo Account */}
+              <button
+                type="button"
+                onClick={() => handleDemoLogin("hod")}
+                disabled={isLoading}
+                className="w-full flex items-center justify-between p-3 bg-[#F8FAFC] hover:bg-white hover:border-[#0B132B] border border-slate-200/90 rounded-xl transition-all tactile-btn text-left group shadow-2xs cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">
+                    HOD
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-[#0B132B] group-hover:text-emerald-900">
+                        Mrs. Abigail Sackey
+                      </span>
+                      <span className="text-[10px] font-semibold text-slate-400 font-mono">
+                        (HOD)
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-mono">
+                      Upper Primary Head • Science & ICT Oversight
+                    </p>
+                  </div>
+                </div>
+                <ArrowRight size={14} className="text-slate-400 group-hover:text-[#0B132B] group-hover:translate-x-0.5 transition-transform" />
+              </button>
+
+              {/* 3. Admin Demo Account */}
+              <button
+                type="button"
+                onClick={() => handleDemoLogin("admin")}
+                disabled={isLoading}
+                className="w-full flex items-center justify-between p-3 bg-[#F8FAFC] hover:bg-white hover:border-[#0B132B] border border-slate-200/90 rounded-xl transition-all tactile-btn text-left group shadow-2xs cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                    ADM
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-[#0B132B] group-hover:text-slate-900">
+                        Mr. Ayiku
+                      </span>
+                      <span className="text-[10px] font-semibold text-slate-400 font-mono">
+                        (ADMIN)
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-mono">
+                      Lead Academic Administrator • All Divisions
+                    </p>
+                  </div>
+                </div>
+                <ArrowRight size={14} className="text-slate-400 group-hover:text-[#0B132B] group-hover:translate-x-0.5 transition-transform" />
+              </button>
+            </div>
+          </div>
 
           <div className="text-center pt-4 border-t border-slate-100">
             <p className="text-xs text-slate-500">

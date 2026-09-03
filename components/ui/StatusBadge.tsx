@@ -14,7 +14,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
 
   if (isPending) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-semibold rounded-md">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-900 text-[11px] font-semibold rounded-lg">
         <Clock size={12} className="text-amber-700" /> Pending
       </span>
     );
@@ -22,7 +22,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
 
   if (isProcessing) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-blue-50 border border-blue-200 text-blue-800 text-[11px] font-semibold rounded-md animate-pulse">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-blue-50 border border-blue-200 text-blue-900 text-[11px] font-semibold rounded-lg animate-pulse">
         <Loader2 className="animate-spin text-blue-700" size={12} /> Analyzing…
       </span>
     );
@@ -30,7 +30,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
 
   if (isCompleted) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold rounded-md">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-900 text-[11px] font-semibold rounded-lg">
         <CheckCircle2 size={12} className="text-emerald-700" /> Audited
       </span>
     );
@@ -38,7 +38,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
 
   if (isResubmission) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-800 text-[11px] font-semibold rounded-md">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-900 text-[11px] font-semibold rounded-lg">
         <AlertTriangle size={12} className="text-rose-700" /> Resubmission Required
       </span>
     );
@@ -46,7 +46,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
 
   if (isFailed) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-800 text-[11px] font-semibold rounded-md">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-900 text-[11px] font-semibold rounded-lg">
         <AlertCircle size={12} className="text-rose-700" /> Failed
       </span>
     );

@@ -10,6 +10,32 @@
   --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --font-heading: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Academy Palette */
+  --color-academy-navy: #0B132B;
+  --color-academy-slate: #1C2541;
+  --color-academy-midnight: #3A506B;
+  --color-chalk-canvas: #F8FAFC;
+  --color-chalk-border: #E2E8F0;
+  --color-chalk-border-strong: #CBD5E1;
+
+  /* Academic Metric Accents */
+  --color-academic-pass: #15803D;
+  --color-academic-pass-bg: #F0FDF4;
+  --color-academic-pass-border: #BBF7D0;
+
+  --color-academic-deficit: #B45309;
+  --color-academic-deficit-bg: #FFFBEB;
+  --color-academic-deficit-border: #FDE68A;
+
+  --color-academic-action: #B91C1C;
+  --color-academic-action-bg: #FEF2F2;
+  --color-academic-action-border: #FECACA;
+
+  --color-academic-info: #1D4ED8;
+  --color-academic-info-bg: #EFF6FF;
+  --color-academic-info-border: #BFDBFE;
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,72 +75,72 @@
 }
 
 :root {
-  --background: oklch(0.985 0.002 247);
-  --foreground: oklch(0.145 0.015 260);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0.015 260);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0.015 260);
-  --primary: oklch(0.18 0.02 260);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.965 0.005 260);
-  --secondary-foreground: oklch(0.2 0.02 260);
-  --muted: oklch(0.965 0.005 260);
-  --muted-foreground: oklch(0.5 0.015 260);
-  --accent: oklch(0.96 0.01 260);
-  --accent-foreground: oklch(0.2 0.02 260);
-  --destructive: oklch(0.58 0.22 25);
-  --border: oklch(0.915 0.008 260);
-  --input: oklch(0.915 0.008 260);
-  --ring: oklch(0.4 0.15 255);
-  --chart-1: oklch(0.85 0.01 260);
-  --chart-2: oklch(0.55 0.015 260);
-  --chart-3: oklch(0.42 0.02 260);
-  --chart-4: oklch(0.35 0.02 260);
-  --chart-5: oklch(0.25 0.02 260);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0.002 247);
-  --sidebar-foreground: oklch(0.145 0.015 260);
-  --sidebar-primary: oklch(0.18 0.02 260);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.96 0.01 260);
-  --sidebar-accent-foreground: oklch(0.2 0.02 260);
-  --sidebar-border: oklch(0.915 0.008 260);
-  --sidebar-ring: oklch(0.4 0.15 255);
+  --background: #F8FAFC;
+  --foreground: #0B132B;
+  --card: #FFFFFF;
+  --card-foreground: #0B132B;
+  --popover: #FFFFFF;
+  --popover-foreground: #0B132B;
+  --primary: #0B132B;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F1F5F9;
+  --secondary-foreground: #1C2541;
+  --muted: #F1F5F9;
+  --muted-foreground: #475569;
+  --accent: #F8FAFC;
+  --accent-foreground: #0B132B;
+  --destructive: #B91C1C;
+  --border: #E2E8F0;
+  --input: #E2E8F0;
+  --ring: #0B132B;
+  --chart-1: #0B132B;
+  --chart-2: #15803D;
+  --chart-3: #B45309;
+  --chart-4: #B91C1C;
+  --chart-5: #1D4ED8;
+  --radius: 0.5rem;
+  --sidebar: #0B132B;
+  --sidebar-foreground: #F8FAFC;
+  --sidebar-primary: #1C2541;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #1C2541;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #1C2541;
+  --sidebar-ring: #3A506B;
 }
 
 .dark {
-  --background: oklch(0.12 0.015 260);
-  --foreground: oklch(0.98 0.005 260);
-  --card: oklch(0.16 0.015 260);
-  --card-foreground: oklch(0.98 0.005 260);
-  --popover: oklch(0.16 0.015 260);
-  --popover-foreground: oklch(0.98 0.005 260);
-  --primary: oklch(0.95 0.005 260);
-  --primary-foreground: oklch(0.14 0.015 260);
-  --secondary: oklch(0.22 0.015 260);
-  --secondary-foreground: oklch(0.98 0.005 260);
-  --muted: oklch(0.22 0.015 260);
-  --muted-foreground: oklch(0.65 0.01 260);
-  --accent: oklch(0.22 0.015 260);
-  --accent-foreground: oklch(0.98 0.005 260);
-  --destructive: oklch(0.65 0.2 25);
-  --border: oklch(0.25 0.015 260);
-  --input: oklch(0.25 0.015 260);
-  --ring: oklch(0.65 0.15 255);
-  --chart-1: oklch(0.85 0.01 260);
-  --chart-2: oklch(0.55 0.015 260);
-  --chart-3: oklch(0.42 0.02 260);
-  --chart-4: oklch(0.35 0.02 260);
-  --chart-5: oklch(0.25 0.02 260);
-  --sidebar: oklch(0.14 0.015 260);
-  --sidebar-foreground: oklch(0.98 0.005 260);
-  --sidebar-primary: oklch(0.55 0.2 255);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.22 0.015 260);
-  --sidebar-accent-foreground: oklch(0.98 0.005 260);
-  --sidebar-border: oklch(0.25 0.015 260);
-  --sidebar-ring: oklch(0.65 0.15 255);
+  --background: #070D1E;
+  --foreground: #F8FAFC;
+  --card: #0B132B;
+  --card-foreground: #F8FAFC;
+  --popover: #0B132B;
+  --popover-foreground: #F8FAFC;
+  --primary: #F8FAFC;
+  --primary-foreground: #0B132B;
+  --secondary: #1C2541;
+  --secondary-foreground: #F8FAFC;
+  --muted: #1C2541;
+  --muted-foreground: #94A3B8;
+  --accent: #1C2541;
+  --accent-foreground: #F8FAFC;
+  --destructive: #EF4444;
+  --border: #1E293B;
+  --input: #1E293B;
+  --ring: #94A3B8;
+  --chart-1: #60A5FA;
+  --chart-2: #34D399;
+  --chart-3: #FBBF24;
+  --chart-4: #F87171;
+  --chart-5: #A78BFA;
+  --sidebar: #070D1E;
+  --sidebar-foreground: #F8FAFC;
+  --sidebar-primary: #1C2541;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #1C2541;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #1E293B;
+  --sidebar-ring: #64748B;
 }
 
 @layer base {
@@ -123,27 +149,72 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
   }
   html {
     @apply font-sans;
   }
 }
 
+/* High-density academic typography & tactile states */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.label-dense {
+  font-size: 0.6875rem; /* 11px */
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+/* Institutional Design System Utilities */
+.academic-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 1rem; /* rounded-2xl */
+  box-shadow: 0 1px 2px 0 rgba(11, 19, 43, 0.04);
+}
+
+.academic-card-header {
+  border-bottom: 1px solid #F1F5F9;
+  padding: 1rem 1.25rem;
+}
+
+.academic-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.5rem;
+  font-size: 0.6875rem; /* 11px */
+  font-weight: 600;
+  border-radius: 0.5rem; /* rounded-lg */
+  border-width: 1px;
+}
+
+/* Tactile micro-press feedback */
+.tactile-btn {
+  transition: all 120ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.tactile-btn:active {
+  transform: scale(0.98);
+}
+
 /* Custom crisp scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.4);
+  background: rgba(148, 163, 184, 0.35);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.7);
+  background: rgba(100, 116, 139, 0.6);
 }
 
 /* Reduced motion preference */
@@ -155,5 +226,48 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Print Stylesheet for Formal Cambridge Pedagogical Evaluation Documents */
+@media print {
+  body {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+  }
+
+  /* Hide interactive application chrome */
+  nav,
+  header,
+  footer,
+  aside,
+  button,
+  .no-print,
+  [role="dialog"] > div:first-child, /* modal overlay backdrops */
+  .chat-panel-container {
+    display: none !important;
+  }
+
+  /* Reset modal positioning to full-page static print */
+  .print-document-sheet {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  .print-break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-page-break-before {
+    break-before: page !important;
+    page-break-before: always !important;
   }
 }

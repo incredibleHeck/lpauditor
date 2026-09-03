@@ -148,12 +148,12 @@ export default function SubmissionsDashboard({
 
   return (
     <div className="space-y-6 font-sans">
-      <div className="flex items-center justify-between border-b border-slate-200/80 pb-4">
+      <div className="flex items-center justify-between border-b border-slate-200/90 pb-4">
         <div>
-          <h2 className="text-base font-bold text-slate-900 tracking-tight">Your Audit Submissions</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Track and view compliance results for weekly lesson plan uploads.</p>
+          <h2 className="text-base font-bold text-[#0B132B] tracking-tight">Your Curriculum Submissions</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Track audit status and Cambridge pedagogical feedback across weekly uploads.</p>
         </div>
-        <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg font-mono">
+        <span className="px-3 py-1 bg-slate-100 border border-slate-200 text-[#0B132B] text-xs font-bold rounded-xl font-mono tabular-nums">
           {submissions.length} Total
         </span>
       </div>
@@ -161,39 +161,41 @@ export default function SubmissionsDashboard({
       {/* Teacher KPI Summary Cards */}
       {submissions.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center justify-between">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex items-center justify-between">
             <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Average Compliance</span>
-              <p className="text-2xl font-bold font-mono text-slate-900 tabular-nums">{avgScore}%</p>
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Average Compliance</span>
+              <p className="text-3xl font-bold font-mono text-[#0B132B] tabular-nums">{avgScore}%</p>
               <p className="text-[11px] text-slate-500">Across {completedAudits.length} audited plan(s)</p>
             </div>
-            <div className="p-3 bg-slate-100 border border-slate-200/70 text-slate-800 rounded-xl">
+            <div className="p-3 bg-slate-100 border border-slate-200 text-[#0B132B] rounded-xl shrink-0">
               <Award size={22} />
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center justify-between">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex items-center justify-between">
             <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Audited Plans</span>
-              <p className="text-2xl font-bold font-mono text-emerald-700 tabular-nums">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Audited Plans</span>
+              <p className="text-3xl font-bold font-mono text-emerald-800 tabular-nums">
                 {completedAudits.length} <span className="text-slate-400 text-sm font-normal">/ {submissions.length}</span>
               </p>
               <p className="text-[11px] text-slate-500">Completed Cambridge evaluations</p>
             </div>
-            <div className="p-3 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl">
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl shrink-0">
               <CheckCircle2 size={22} />
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center justify-between">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex items-center justify-between">
             <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Revisions Requested</span>
-              <p className={`text-2xl font-bold font-mono tabular-nums ${revisionNeededCount > 0 ? "text-amber-700" : "text-slate-900"}`}>
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Revisions Requested</span>
+              <p className={`text-3xl font-bold font-mono tabular-nums ${revisionNeededCount > 0 ? "text-amber-800" : "text-[#0B132B]"}`}>
                 {revisionNeededCount}
               </p>
-              <p className="text-[11px] text-slate-500">Flagged for HOD pedagogical revision</p>
+              <p className="text-[11px] text-slate-500">Action items flagged by HOD</p>
             </div>
-            <div className="p-3 bg-slate-100 border border-slate-200/70 text-slate-700 rounded-xl">
+            <div className={`p-3 rounded-xl border shrink-0 ${
+              revisionNeededCount > 0 ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-slate-100 border-slate-200 text-slate-700"
+            }`}>
               <RotateCcw size={22} />
             </div>
           </div>
@@ -202,7 +204,7 @@ export default function SubmissionsDashboard({
 
       {/* Search & Filter Toolbar */}
       {submissions.length > 0 && (
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
           <div className="relative flex-1 w-full">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -210,7 +212,7 @@ export default function SubmissionsDashboard({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by week, topic, or filename…"
-              className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 bg-white"
+              className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0B132B]/15 focus:border-[#0B132B] bg-white text-slate-900"
             />
           </div>
 
@@ -221,7 +223,7 @@ export default function SubmissionsDashboard({
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-2.5 py-1.5 text-xs font-medium border border-slate-200 rounded-lg bg-white outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 cursor-pointer"
+              className="px-3 py-2 text-xs font-semibold border border-slate-200 rounded-xl bg-white text-slate-800 outline-none focus:ring-2 focus:ring-[#0B132B]/15 focus:border-[#0B132B] cursor-pointer"
             >
               <option value="ALL">All Statuses</option>
               <option value="COMPLETED">Audited</option>
@@ -233,7 +235,7 @@ export default function SubmissionsDashboard({
             <select
               value={gradeFilter}
               onChange={(e) => setGradeFilter(e.target.value)}
-              className="px-2.5 py-1.5 text-xs font-medium border border-slate-200 rounded-lg bg-white outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 cursor-pointer"
+              className="px-3 py-2 text-xs font-semibold border border-slate-200 rounded-xl bg-white text-slate-800 outline-none focus:ring-2 focus:ring-[#0B132B]/15 focus:border-[#0B132B] cursor-pointer"
             >
               <option value="ALL">All Grades</option>
               {GRADE_LEVELS.map((g) => <option key={g} value={g}>{g}</option>)}
