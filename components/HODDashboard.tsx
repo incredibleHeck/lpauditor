@@ -3,29 +3,40 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { getDepartmentSubmissions } from "@/app/actions/submissions";
 import { getDepartmentAnalytics } from "@/app/actions/ai";
-import { getDefaultersReportAction, triggerTelegramDefaulterReportAction } from "@/app/actions/notifications";
+import { getDefaultersReportAction, triggerWhatsAppDefaulterReportAction } from "@/app/actions/notifications";
 import { 
   FileText, Sparkles, Download, RefreshCw, Search, Filter
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { toast } from "sonner";
-import { DefaulterReportData } from "@/lib/telegram";
+import { DefaulterReportData } from "@/lib/whatsapp";
 import DepartmentKPIs from "./hod/DepartmentKPIs";
 import DefaultersPanel from "./hod/DefaultersPanel";
 import { SubmissionsTable } from "./SubmissionsTable";
 import AuditDetailsModal from "./AuditDetailsModal";
 import type { Audit, Submission } from "@/lib/types";
 import { getFileName, formatDate, getAuditFromSubmission } from "@/lib/format-utils";
-import { DEPARTMENTS, GRADE_LEVELS } from "@/lib/constants";
+import { 
+  GRADE_LEVELS, 
+  ACADEMIC_DIVISIONS, 
+  SECTIONAL_HOD_MAP, 
+  SCHOOL_SUBJECTS 
+} from "@/lib/constants";
 
 interface HODDashboardProps {
   initialSubmissions: Submission[];
   department: string;
+  isAdmin?: boolean;
   refreshTrigger?: number;
 }
 
-export default function HODDashboard({ initialSubmissions, department, refreshTrigger = 0 }: HODDashboardProps) {
+export default function HODDashboard({ 
+  initialSubmissions, 
+  department, 
+  isAdmin = false, 
+  refreshTrigger = 0 
+}: HODDashboardProps) {
   const [submissions, setSubmissions] = useState<Submission[]>(initialSubmissions);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [selectedAudit, setSelectedAudit] = useState<Audit | null>(null);
@@ -71,18 +82,20 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
 
   const handleSendTelegramAlert = async () => {
     setDispatchingTelegram(true);
-    const res = await triggerTelegramDefaulterReportAction(selectedWeek, selectedDepartment);
+    const res = await triggerWhatsAppDefaulterReportAction(selectedWeek, selectedDepartment);
     if (res.success) {
-      if (res.telegramResult?.success) {
-        toast.success("Telegram defaulters report successfully sent to administrators!");
+      if (res.whatsAppResult?.simulated) {
+        toast.info("WhatsApp report compiled! Running in SIMULATED mode (set WHATSAPP_API_TOKEN to go live).");
+      } else if (res.whatsAppResult?.success) {
+        toast.success("WhatsApp defaulters report successfully sent to administrators!");
       } else {
         toast.warning(
-          res.telegramResult?.error || 
-          "Defaulters report compiled, but Telegram dispatch skipped (check TELEGRAM_BOT_TOKEN)."
+          res.whatsAppResult?.error || 
+          "Defaulters report compiled, but WhatsApp dispatch skipped."
         );
       }
     } else {
-      toast.error(res.error || "Failed to dispatch Telegram report.");
+      toast.error(res.error || "Failed to dispatch WhatsApp report.");
     }
     setDispatchingTelegram(false);
   };
@@ -169,7 +182,11 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
     }
 
     const sanitizeCSVField = (val: string) => {
-      return `"${(val || "").replace(/[\r\n]+/g, " ").replace(/"/g, '""')}"`;
+      let clean = (val || "").replace(/[\r\n]+/g, " ");
+      if (/^[=+\-@\t\r]/.test(clean)) {
+        clean = `'${clean}`;
+      }
+      return `"${clean.replace(/"/g, '""')}"`;
     };
 
     const headers = ["Teacher Name", "Subject", "Grade Level", "Week", "Audit Status", "HOD Decision", "Compliance Score %", "Submitted Date"];
@@ -250,10 +267,37 @@ export default function HODDashboard({ initialSubmissions, department, refreshTr
           <select
             value={selectedDepartment}
             onChange={(e) => setSelectedDepartment(e.target.value)}
-            className="px-3 py-1.5 bg-white border border-slate-200 text-slate-900 text-xs font-semibold rounded-lg shadow-2xs outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 cursor-pointer"
+            disabled={!isAdmin && Boolean(department && department !== "Administration" && department !== "All Departments")}
+            className="px-3 py-1.5 bg-white border border-slate-200 text-slate-900 text-xs font-semibold rounded-lg shadow-2xs outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 cursor-pointer disabled:bg-slate-50 disabled:cursor-not-allowed"
           >
-            <option value="All Departments">All Departments (School-Wide)</option>
-            {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+            {isAdmin ? (
+              <>
+                <option value="All Departments">All Departments (School-Wide)</option>
+                <optgroup label="Academic Divisions (Dansoman Pilot)">
+                  {ACADEMIC_DIVISIONS.map((div) => {
+                    const info = SECTIONAL_HOD_MAP[div];
+                    return (
+                      <option key={div} value={div}>
+                        {div} ({info?.grades} — HOD: {info?.name})
+                      </option>
+                    );
+                  })}
+                </optgroup>
+                <optgroup label="Subject Areas">
+                  {SCHOOL_SUBJECTS.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </optgroup>
+              </>
+            ) : (
+              <>
+                <option value={selectedDepartment}>
+                  {selectedDepartment} Division ({SECTIONAL_HOD_MAP[selectedDepartment]?.grades || "Assigned Division"})
+                </option>
+              </>
+            )}
           </select>
 
           <button

@@ -12,6 +12,7 @@ const eslintConfig = defineConfig([
     ".firebase/**",
     "out/**",
     "build/**",
+    "coverage/**",
     "node_modules/**",
     "jest.config.js",
     "jest.setup.js",

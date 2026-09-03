@@ -1,6 +1,6 @@
 import React from "react";
-import { DefaulterReportData } from "@/lib/telegram";
-import { CalendarClock, RefreshCw, Send, Loader2, UserX, CheckCircle2 } from "lucide-react";
+import { DefaulterReportData, generateWhatsAppNudgeUrl } from "@/lib/whatsapp";
+import { CalendarClock, RefreshCw, Loader2, UserX, CheckCircle2, MessageSquare, AlertTriangle } from "lucide-react";
 import { WEEK_OPTIONS } from "@/lib/constants";
 
 interface DefaultersPanelProps {
@@ -20,11 +20,12 @@ export default function DefaultersPanel({
   onSendAlert,
   isDispatching,
   selectedWeek,
-  onWeekChange
+  onWeekChange,
 }: DefaultersPanelProps) {
-  const complianceRate = report && report.totalTeachers > 0
-    ? Math.round((report.submittedCount / report.totalTeachers) * 100)
-    : 100;
+  const complianceRate =
+    report && report.totalTeachers > 0
+      ? Math.round((report.submittedCount / report.totalTeachers) * 100)
+      : 100;
 
   const currentWeek = selectedWeek || report?.weekName || WEEK_OPTIONS[0];
 
@@ -74,14 +75,14 @@ export default function DefaultersPanel({
           <button
             onClick={onSendAlert}
             disabled={isDispatching}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-2xs transition-all cursor-pointer disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-slate-900/20 active:scale-[0.99]"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-2xs transition-all cursor-pointer disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-emerald-600/20 active:scale-[0.99]"
           >
             {isDispatching ? (
               <Loader2 size={13} className="animate-spin" />
             ) : (
-              <Send size={13} />
+              <MessageSquare size={13} />
             )}
-            <span>{isDispatching ? "Dispatching…" : "Dispatch Telegram Alert"}</span>
+            <span>{isDispatching ? "Dispatching…" : "Dispatch WhatsApp Alert"}</span>
           </button>
         </div>
       </div>
@@ -112,27 +113,104 @@ export default function DefaultersPanel({
             </div>
           </div>
 
+          {/* Partially Submitted Faculty Section */}
+          {report.partiallySubmitted && report.partiallySubmitted.length > 0 && (
+            <div className="bg-amber-50/50 border border-amber-200/70 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
+                <AlertTriangle size={15} className="text-amber-700" />
+                <span>Partially Submitted Faculty — Missing Specific Classes ({report.partiallySubmitted.length})</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                {report.partiallySubmitted.map((teacher) => {
+                  const nudgeUrl = teacher.phone
+                    ? generateWhatsAppNudgeUrl(teacher.phone, teacher.fullName, teacher.missingQuotas, currentWeek)
+                    : null;
+                  return (
+                    <div
+                      key={teacher.id}
+                      className="bg-white border border-amber-200 rounded-lg p-3 flex flex-col justify-between gap-2 shadow-2xs"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="text-xs font-semibold text-slate-900 truncate">{teacher.fullName}</p>
+                          <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-medium rounded shrink-0">
+                            {teacher.department}
+                          </span>
+                        </div>
+                        {teacher.missingQuotas && teacher.missingQuotas.length > 0 && (
+                          <p className="text-[11px] text-amber-700 mt-1 font-medium leading-tight">
+                            Missing: {teacher.missingQuotas.map((q) => `${q.className} ${q.subject}`).join(", ")}
+                          </p>
+                        )}
+                      </div>
+                      <div className="pt-1 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-slate-400 truncate">{teacher.phone || teacher.email}</span>
+                        {nudgeUrl ? (
+                          <a
+                            href={nudgeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px] font-bold rounded transition-colors"
+                          >
+                            <MessageSquare size={10} />
+                            <span>Nudge</span>
+                          </a>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 italic">No phone</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Full Defaulters Section */}
           {report.defaulterCount > 0 ? (
             <div className="bg-rose-50/40 border border-rose-200/60 rounded-xl p-4 space-y-3">
               <div className="flex items-center gap-2 text-rose-900 font-bold text-xs">
-                <UserX size={15} className="text-rose-700" /> 
+                <UserX size={15} className="text-rose-700" />
                 <span>Faculty Members Awaiting Submission ({report.defaulterCount})</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                {report.defaulters.map((teacher) => (
-                  <div
-                    key={teacher.id}
-                    className="bg-white border border-rose-100 rounded-lg p-2.5 flex items-center justify-between shadow-2xs"
-                  >
-                    <div className="truncate pr-2">
-                      <p className="text-xs font-semibold text-slate-900 truncate">{teacher.fullName}</p>
-                      <p className="text-[11px] font-mono text-slate-400 truncate">{teacher.email}</p>
+                {report.defaulters.map((teacher) => {
+                  const nudgeUrl = teacher.phone
+                    ? generateWhatsAppNudgeUrl(teacher.phone, teacher.fullName, teacher.missingQuotas, currentWeek)
+                    : null;
+                  return (
+                    <div
+                      key={teacher.id}
+                      className="bg-white border border-rose-100 rounded-lg p-3 flex flex-col justify-between gap-2 shadow-2xs"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="text-xs font-semibold text-slate-900 truncate">{teacher.fullName}</p>
+                          <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-medium rounded shrink-0">
+                            {teacher.department}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-1 font-mono truncate">{teacher.email}</p>
+                      </div>
+                      <div className="pt-1 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-slate-400 truncate">{teacher.phone || "No phone"}</span>
+                        {nudgeUrl ? (
+                          <a
+                            href={nudgeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px] font-bold rounded transition-colors"
+                          >
+                            <MessageSquare size={10} />
+                            <span>Nudge</span>
+                          </a>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 italic">No phone</span>
+                        )}
+                      </div>
                     </div>
-                    <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-medium rounded shrink-0">
-                      {teacher.department}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ) : (

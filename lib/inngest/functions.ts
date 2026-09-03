@@ -3,9 +3,9 @@ import { adminDb, adminStorage } from "../firebase-admin";
 import { GoogleAIFileManager } from "@google/generative-ai/server";
 import { getPedagogicalRubric } from "../rubric";
 import { getDefaultersReportForWeek } from "../defaulters";
-import { sendTelegramMessage, formatDefaultersTelegramMessage } from "../telegram";
+import { sendWhatsAppMessage, formatDefaultersWhatsAppMessage, WhatsAppSendResult } from "../whatsapp";
 import { getGeminiClient } from "../gemini";
-import { SCORE_PASSING_THRESHOLD } from "../constants";
+import { SCORE_PASSING_THRESHOLD, GEMINI_AUDIT_MODEL } from "../constants";
 import { logger } from "@/lib/logger";
 import fs from "fs";
 import path from "path";
@@ -78,11 +78,11 @@ export const processLessonPlanAudit = inngest.createFunction(
     try {
       const rubricInfo = getPedagogicalRubric(subject);
 
-      // Step C: Inference with Gemini 3.7 Flash and runtime Zod validation
+      // Step C: Inference with Gemini 3.8 Flash and runtime Zod validation
       const auditResult: ZodAuditResponse = await step.run("execute-audit", async () => {
         const ai = getGeminiClient();
         const model = ai.getGenerativeModel({
-          model: "gemini-3.7-flash",
+          model: GEMINI_AUDIT_MODEL,
           systemInstruction: rubricInfo.combinedInstruction,
           generationConfig: {
             responseMimeType: "application/json",
@@ -201,7 +201,7 @@ export const processLessonPlanAudit = inngest.createFunction(
 );
 
 /**
- * Automated Defaulters Telegram Report Function
+ * Automated Defaulters WhatsApp Report Function
  * Triggers on a weekly cron schedule (Friday 17:00) or manually via 'defaulters.check' event.
  */
 export const checkAndReportDefaulters = inngest.createFunction(
@@ -210,11 +210,13 @@ export const checkAndReportDefaulters = inngest.createFunction(
     retries: 2,
     triggers: [
       { cron: "0 17 * * 5" }, // Every Friday at 17:00 UTC
-      { event: "defaulters.check" } // Manual trigger event
-    ]
+      { event: "defaulters.check" }, // Manual trigger event
+    ],
   },
   async ({ event, step }) => {
-    const eventData = event.data as { weekName?: string } | undefined;
+    const eventData = event.data as
+      | { weekName?: string; skipWhatsAppSend?: boolean; skipTelegramSend?: boolean }
+      | undefined;
     const weekName = eventData?.weekName;
 
     // Step 1: Compute defaulters report
@@ -222,16 +224,20 @@ export const checkAndReportDefaulters = inngest.createFunction(
       return await getDefaultersReportForWeek(weekName);
     });
 
-    // Step 2: Format and send Telegram alert
-    const telegramResult = await step.run("send-telegram-alert", async () => {
-      const messageText = formatDefaultersTelegramMessage(report);
-      return await sendTelegramMessage(messageText, "Markdown");
-    });
+    // Step 2: Format and send WhatsApp alert (skipped if manual trigger already dispatched it)
+    let whatsAppResult: WhatsAppSendResult = { success: true };
+    if (!eventData?.skipWhatsAppSend && !eventData?.skipTelegramSend) {
+      whatsAppResult = await step.run("send-whatsapp-alert", async () => {
+        const messageText = formatDefaultersWhatsAppMessage(report);
+        return await sendWhatsAppMessage(messageText);
+      });
+    }
 
     return {
-      status: telegramResult.success ? "success" : "warning",
+      status: whatsAppResult.success ? "success" : "warning",
       report,
-      telegramResult
+      whatsAppResult,
+      telegramResult: whatsAppResult, // Backward-compatible alias
     };
   }
 );

@@ -3,17 +3,16 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { BookOpen, Mail, Lock, User, Briefcase, Building2, ArrowRight, Loader2, AlertCircle, CheckCircle, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { DEPARTMENTS, SCHOOL_EMAIL_DOMAIN, isInstitutionalEmail, isAdminEmail } from "@/lib/constants";
+import { DEPARTMENTS, SCHOOL_EMAIL_DOMAIN, isInstitutionalEmail } from "@/lib/constants";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const role = "TEACHER";
   const [department, setDepartment] = useState<string>(DEPARTMENTS[0]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -41,24 +40,24 @@ export default function SignupPage() {
         return;
       }
 
-      const assignedRole = isAdminEmail(cleanEmail) ? "ADMIN" : role;
-      const assignedDept = cleanEmail === "theodorahammond@stadelaideschool.com" ? "Administration" : department;
-
       // 1. Create User in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
       const user = userCredential.user;
 
-      // 2. Save User Profile in Cloud Firestore
+      // 2. Trigger Firebase email verification
+      await sendEmailVerification(user);
+
+      // 3. Save User Profile in Cloud Firestore strictly as TEACHER
       await setDoc(doc(db, "profiles", user.uid), {
         id: user.uid,
         full_name: fullName,
         email: cleanEmail,
-        role: assignedRole,
-        department: assignedDept,
+        role: "TEACHER", // Strictly enforced: Admin privileges must be assigned out-of-band
+        department: department,
         created_at: new Date().toISOString()
       });
 
-      setSuccessMsg("Account registered successfully! Establishing session…");
+      setSuccessMsg("Account registered successfully! A verification link has been sent to your email. Please verify your email.");
       
       const idToken = await userCredential.user.getIdToken();
       await fetch("/api/auth/session", {
@@ -69,7 +68,7 @@ export default function SignupPage() {
 
       setTimeout(() => {
         router.push("/");
-      }, 1500);
+      }, 2000);
 
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Signup failed. Please check your details and try again.");

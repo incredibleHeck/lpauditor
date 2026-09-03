@@ -112,6 +112,7 @@ export default function DashboardPageContent({
           <HODDashboard
             initialSubmissions={[]}
             department={department}
+            isAdmin={isAdmin}
             refreshTrigger={refreshTrigger}
           />
         ) : (
@@ -142,6 +143,10 @@ export default function DashboardPageContent({
                   parentSubmissionId={revisionTarget?.id}
                   parentVersion={revisionTarget?.version || 1}
                   onCancelRevision={() => setRevisionTarget(null)}
+                  assignedSubjects={profile?.assigned_subjects}
+                  assignedClasses={profile?.assigned_classes}
+                  expectedQuotas={profile?.expected_quotas}
+                  isAdmin={isAdmin}
                 />
               </div>
 

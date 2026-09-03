@@ -3,7 +3,7 @@
 import { inngest } from "@/lib/inngest/client";
 import { adminDb } from "@/lib/firebase-admin";
 import { getAuthenticatedUser } from "@/lib/auth-helpers";
-import { SCORE_PASSING_THRESHOLD } from "@/lib/constants";
+import { SCORE_PASSING_THRESHOLD, DIVISION_CLASSES } from "@/lib/constants";
 import { logger } from "@/lib/logger";
 import { 
   submitLessonPlanSchema, 
@@ -193,22 +193,30 @@ export async function getSubmissionStatus(submissionId: string) {
 export async function getDepartmentSubmissions(department: string) {
   try {
     const user = await getAuthenticatedUser();
+    const isDivision = Boolean(DIVISION_CLASSES[department]);
+
     if (user.role !== "ADMIN" && (user.role !== "HOD" || user.department !== department)) {
       throw new Error(`Forbidden: You are not authorized to view ${department} department submissions.`);
     }
 
     let queryRef;
-    if (department === "All" || department === "All Departments") {
+    if (department === "All" || department === "All Departments" || isDivision) {
       queryRef = adminDb.collection("submissions").orderBy("created_at", "desc").limit(100);
     } else {
       queryRef = adminDb.collection("submissions").where("subject", "==", department).orderBy("created_at", "desc").limit(100);
     }
     const snapshot = await queryRef.get();
 
-    const submissionIds = snapshot.docs.map((doc) => doc.id);
+    let docs = snapshot.docs;
+    if (isDivision) {
+      const allowedClasses = new Set(DIVISION_CLASSES[department].map((c) => c.toLowerCase()));
+      docs = docs.filter((d) => allowedClasses.has((d.data().grade_level || "").trim().toLowerCase()));
+    }
+
+    const submissionIds = docs.map((doc) => doc.id);
     const auditMap = await fetchAuditsForSubmissions(submissionIds);
 
-    const teacherIds = Array.from(new Set(snapshot.docs.map((doc) => doc.data().teacher_id).filter(Boolean)));
+    const teacherIds = Array.from(new Set(docs.map((doc) => doc.data().teacher_id).filter(Boolean)));
     const profilesMap: Record<string, { full_name?: string; department?: string }> = {};
 
     const profileDocs = await Promise.all(
@@ -221,7 +229,7 @@ export async function getDepartmentSubmissions(department: string) {
       }
     });
 
-    const submissions = snapshot.docs.map((doc) => {
+    const submissions = docs.map((doc) => {
       const data = doc.data();
       const subData = { id: doc.id, ...data };
       const audit = auditMap[doc.id];
@@ -260,7 +268,19 @@ export async function updateSubmissionDecision(rawInput: UpdateSubmissionDecisio
     }
     const subData = doc.data()!;
 
-    if (user.role !== "ADMIN" && (user.role !== "HOD" || user.department !== subData.subject)) {
+    // Check sectional / divisional HOD authorization or subject fallback
+    const userDivisionClasses = user.department && DIVISION_CLASSES[user.department]
+      ? DIVISION_CLASSES[user.department].map((c) => c.toLowerCase())
+      : null;
+
+    const isClassInDivision = userDivisionClasses
+      ? userDivisionClasses.includes((subData.grade_level || "").toLowerCase())
+      : false;
+
+    const isAuthorizedHOD =
+      user.role === "HOD" && (isClassInDivision || user.department === subData.subject);
+
+    if (user.role !== "ADMIN" && !isAuthorizedHOD) {
       throw new Error("Forbidden: Only assigned HODs can update submission decisions.");
     }
 

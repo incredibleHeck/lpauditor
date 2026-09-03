@@ -7,7 +7,8 @@ import { storage, auth } from "@/lib/firebase";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { submitLessonPlan } from "@/app/actions/submissions";
 import { toast } from "sonner";
-import { DEPARTMENTS, GRADE_LEVELS, WEEK_OPTIONS } from "@/lib/constants";
+import { DEPARTMENTS, GRADE_LEVELS, WEEK_OPTIONS, SCHOOL_SUBJECTS, SCHOOL_CLASSES } from "@/lib/constants";
+import type { ExpectedQuota } from "@/lib/types";
 
 // IndexedDB Helper Functions
 const openDB = (): Promise<IDBDatabase> => {
@@ -72,6 +73,10 @@ interface LessonPlanDropzoneProps {
   parentSubmissionId?: string;
   parentVersion?: number;
   onCancelRevision?: () => void;
+  assignedSubjects?: string[];
+  assignedClasses?: string[];
+  expectedQuotas?: ExpectedQuota[];
+  isAdmin?: boolean;
 }
 
 export default function LessonPlanDropzone({ 
@@ -82,13 +87,44 @@ export default function LessonPlanDropzone({
   parentSubmissionId,
   parentVersion,
   onCancelRevision,
+  assignedSubjects,
+  assignedClasses,
+  expectedQuotas,
+  isAdmin = false,
 }: LessonPlanDropzoneProps) {
   const [file, setFile] = useState<File | null>(null);
   const [uploadState, setUploadState] = useState<"idle" | "uploading" | "success" | "error" | "offline">("idle");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
-  const [subject, setSubject] = useState<string>(initialSubject || DEPARTMENTS[0]);
-  const [gradeLevel, setGradeLevel] = useState<string>(initialGradeLevel || GRADE_LEVELS[0]);
+
+  // Determine available subjects based on user assignment and admin role
+  const availableSubjects: readonly string[] = (!isAdmin && assignedSubjects && assignedSubjects.length > 0)
+    ? assignedSubjects
+    : SCHOOL_SUBJECTS;
+
+  // Function to filter classes matching the selected subject
+  const getAvailableClassesForSubject = useCallback((subj: string): readonly string[] => {
+    if (isAdmin || !expectedQuotas || expectedQuotas.length === 0) {
+      if (assignedClasses && assignedClasses.length > 0 && !isAdmin) {
+        return assignedClasses;
+      }
+      return SCHOOL_CLASSES;
+    }
+    const matching = expectedQuotas
+      .filter((q) => q.subject.toLowerCase() === subj.toLowerCase())
+      .map((q) => q.className);
+    if (matching.length > 0) return matching;
+    return assignedClasses && assignedClasses.length > 0
+      ? assignedClasses
+      : SCHOOL_CLASSES;
+  }, [isAdmin, expectedQuotas, assignedClasses]);
+
+  const defaultSubject = initialSubject || availableSubjects[0] || DEPARTMENTS[0];
+  const initialClassOptions = getAvailableClassesForSubject(defaultSubject);
+  const defaultGrade = initialGradeLevel || initialClassOptions[0] || GRADE_LEVELS[0];
+
+  const [subject, setSubject] = useState<string>(defaultSubject);
+  const [gradeLevel, setGradeLevel] = useState<string>(defaultGrade);
   const [weekName, setWeekName] = useState<string>(initialWeekName || WEEK_OPTIONS[0]);
   const [revisionNotes, setRevisionNotes] = useState("");
 
@@ -96,22 +132,36 @@ export default function LessonPlanDropzone({
     subject: initialSubject,
     gradeLevel: initialGradeLevel,
     weekName: initialWeekName,
+    availableSubjectList: availableSubjects,
   });
 
   if (
     initialSubject !== prevInitial.subject ||
     initialGradeLevel !== prevInitial.gradeLevel ||
-    initialWeekName !== prevInitial.weekName
+    initialWeekName !== prevInitial.weekName ||
+    availableSubjects !== prevInitial.availableSubjectList
   ) {
     setPrevInitial({
       subject: initialSubject,
       gradeLevel: initialGradeLevel,
       weekName: initialWeekName,
+      availableSubjectList: availableSubjects,
     });
-    if (initialSubject) setSubject(initialSubject);
+    if (initialSubject) {
+      setSubject(initialSubject);
+    } else if (availableSubjects.length > 0 && !availableSubjects.includes(subject)) {
+      const nextSubj = availableSubjects[0];
+      setSubject(nextSubj);
+      const nextClasses = getAvailableClassesForSubject(nextSubj);
+      if (nextClasses.length > 0 && !nextClasses.includes(gradeLevel)) {
+        setGradeLevel(nextClasses[0]);
+      }
+    }
     if (initialGradeLevel) setGradeLevel(initialGradeLevel);
     if (initialWeekName) setWeekName(initialWeekName);
   }
+
+  const availableClasses = getAvailableClassesForSubject(subject);
 
   const isRevisionMode = Boolean(parentSubmissionId);
   const nextVersion = (parentVersion || 1) + 1;
@@ -344,28 +394,59 @@ export default function LessonPlanDropzone({
       {/* Configuration Pickers */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-slate-700">Subject Department</label>
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-semibold text-slate-700">Subject Department</label>
+            {!isAdmin && assignedSubjects && assignedSubjects.length > 0 && (
+              <span className="text-[10px] font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                Assigned
+              </span>
+            )}
+            {isAdmin && (
+              <span className="text-[10px] font-medium text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">
+                Admin
+              </span>
+            )}
+          </div>
           <select 
             value={subject} 
-            onChange={(e) => setSubject(e.target.value)}
+            onChange={(e) => {
+              const newSubj = e.target.value;
+              setSubject(newSubj);
+              const nextClasses = getAvailableClassesForSubject(newSubj);
+              if (nextClasses.length > 0 && !nextClasses.includes(gradeLevel)) {
+                setGradeLevel(nextClasses[0]);
+              }
+            }}
             disabled={uploadState === "uploading" || uploadState === "success" || isRevisionMode}
             className="w-full text-xs font-medium border border-slate-200 rounded-lg py-2 px-3 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all cursor-pointer shadow-2xs disabled:bg-slate-50 disabled:text-slate-500"
           >
-            {DEPARTMENTS.map((dept) => (
+            {availableSubjects.map((dept) => (
               <option key={dept} value={dept}>{dept}</option>
             ))}
           </select>
         </div>
 
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-slate-700">Grade Level</label>
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-semibold text-slate-700">Class / Grade Level</label>
+            {!isAdmin && assignedClasses && assignedClasses.length > 0 && (
+              <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                Assigned
+              </span>
+            )}
+            {isAdmin && (
+              <span className="text-[10px] font-medium text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">
+                All Classes
+              </span>
+            )}
+          </div>
           <select 
             value={gradeLevel} 
             onChange={(e) => setGradeLevel(e.target.value)}
             disabled={uploadState === "uploading" || uploadState === "success" || isRevisionMode}
             className="w-full text-xs font-medium border border-slate-200 rounded-lg py-2 px-3 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all cursor-pointer shadow-2xs disabled:bg-slate-50 disabled:text-slate-500"
           >
-            {GRADE_LEVELS.map((grade) => (
+            {availableClasses.map((grade) => (
               <option key={grade} value={grade}>{grade}</option>
             ))}
           </select>

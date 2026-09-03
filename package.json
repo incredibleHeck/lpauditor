@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "jest"
+    "test": "jest",
+    "seed:roster": "npx tsx scripts/seed-roster-from-fixture.ts",
+    "provision:logins": "npx tsx scripts/provision-faculty-logins.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

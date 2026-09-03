@@ -4,7 +4,12 @@ import { adminDb } from "@/lib/firebase-admin";
 import { getAuthenticatedUser } from "@/lib/auth-helpers";
 import { getGeminiClient } from "@/lib/gemini";
 import { fetchAuditsForSubmissions } from "./submissions";
-import { SCORE_PASSING_THRESHOLD } from "@/lib/constants";
+import {
+  SCORE_PASSING_THRESHOLD,
+  DIVISION_CLASSES,
+  GEMINI_CHAT_MODEL,
+  GEMINI_SYNTHESIS_MODEL,
+} from "@/lib/constants";
 import { logger } from "@/lib/logger";
 import { 
   chatWithAuditorSchema, 
@@ -66,7 +71,7 @@ Here are the AI Audit Findings for this lesson plan:
 Use this context to guide the teacher. When they ask questions, provide clear, actionable, and specific suggestions matching Cambridge standards to fix their flags and build on their strengths. Do not make generic recommendations. Provide markdown-formatted responses with bullet points. Be concise, supportive, and direct.`;
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-3.7-flash",
+      model: GEMINI_CHAT_MODEL,
       systemInstruction,
     });
 
@@ -108,22 +113,30 @@ export async function getDepartmentAnalytics(departmentFilter: string = "All") {
     const targetDept = parsed.success ? parsed.data.departmentFilter : departmentFilter;
 
     const user = await getAuthenticatedUser();
+    const isDivision = Boolean(DIVISION_CLASSES[targetDept]);
+
     if (user.role !== "ADMIN" && (user.role !== "HOD" || user.department !== targetDept)) {
       throw new Error(`Forbidden: You are not authorized to view ${targetDept} department analytics.`);
     }
 
     let queryRef;
-    if (targetDept === "All" || targetDept === "All Departments") {
+    if (targetDept === "All" || targetDept === "All Departments" || isDivision) {
       queryRef = adminDb.collection("submissions");
     } else {
       queryRef = adminDb.collection("submissions").where("subject", "==", targetDept);
     }
     const snapshot = await queryRef.get();
 
-    const submissionIds = snapshot.docs.map((doc) => doc.id);
+    let docs = snapshot.docs;
+    if (isDivision) {
+      const allowedClasses = new Set(DIVISION_CLASSES[targetDept].map((c) => c.toLowerCase()));
+      docs = docs.filter((d) => allowedClasses.has((d.data().grade_level || "").trim().toLowerCase()));
+    }
+
+    const submissionIds = docs.map((doc) => doc.id);
     const auditMap = await fetchAuditsForSubmissions(submissionIds);
 
-    const submissions = snapshot.docs.map((doc) => {
+    const submissions = docs.map((doc) => {
       const subData = doc.data() as { status?: string };
       const audit = auditMap[doc.id];
       return {
@@ -133,8 +146,10 @@ export async function getDepartmentAnalytics(departmentFilter: string = "All") {
       };
     });
 
-    const completedSubmissions = submissions.filter((sub) => sub.status === "COMPLETED");
-    const completedAudits = completedSubmissions
+    const auditedSubmissions = submissions.filter(
+      (sub) => sub.status === "COMPLETED" || sub.status === "RESUBMISSION_REQUIRED"
+    );
+    const completedAudits = auditedSubmissions
       .map((sub) => sub.ai_audits[0])
       .filter((audit) => audit && audit.score !== null && audit.score !== undefined);
 
@@ -162,12 +177,13 @@ export async function getDepartmentAnalytics(departmentFilter: string = "All") {
     let brief = "No department submissions have been successfully audited yet to generate a synthesis.";
     if (completedCount > 0) {
       const genAI = getGeminiClient();
-      const model = genAI.getGenerativeModel({ model: "gemini-3.7-flash" });
+      const model = genAI.getGenerativeModel({ model: GEMINI_SYNTHESIS_MODEL });
 
       const synthesisPrompt = `You are a Lead Pedagogical Auditor analyzing weekly lesson plans for the ${targetDept} department.
 Here is a summary of the compliance audits for this week:
-- Total Completed Lesson Plans Audited: ${completedCount}
+- Total Lesson Plans Audited: ${completedCount}
 - Average Compliance Score: ${averageScore}%
+- Underperforming Plans (<${SCORE_PASSING_THRESHOLD}%): ${underperformingCount}
 - Total Compliance Flags Raised: ${allFlags.length}
 - Sample of strengths noted: ${JSON.stringify(allStrengths.slice(0, 10))}
 - Sample of flags raised: ${JSON.stringify(allFlags.slice(0, 10))}

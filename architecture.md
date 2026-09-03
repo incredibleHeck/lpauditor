@@ -64,7 +64,7 @@ The Inngest worker (`processLessonPlanAudit` in `lib/inngest/functions.ts`) exec
 2. **`retrieve-and-upload-to-gemini`**: Streams the document from Firebase Storage to local temporary storage and uploads it to the Google AI File API (`@google/generative-ai/server`), returning a URI and MIME type.
 3. **`execute-audit`**:
    - Evaluates the subject using `getPedagogicalRubric(subject)`. If the subject matches one of the 10 configured departments, the Cambridge Framework prompt + Subject Yardstick are applied. If not, the `GENERAL_PEDAGOGICAL_RUBRIC` fallback is applied.
-   - Invokes `gemini-3.7-flash` with `responseMimeType: "application/json"` and `responseSchema: auditResponseSchema`.
+   - Invokes `gemini-3.8-flash` (or configured `GEMINI_AUDIT_MODEL`) with `responseMimeType: "application/json"` and `responseSchema: auditResponseSchema`.
    - Parses the JSON string safely inside a `try/catch` block and validates the shape against `zodAuditResponseSchema`.
 4. **`save-results` (Threshold Gate & Commitment)**:
    - Evaluates `const isBelowThreshold = auditResult.score < SCORE_PASSING_THRESHOLD` (70%).

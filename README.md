@@ -1,6 +1,6 @@
 # HecTech LPAuditor 🎓🤖
 
-**HecTech LPAuditor** is an enterprise-grade pedagogical auditing and compliance platform designed for schools and EdTech institutions. It automates compliance reviews for weekly Cambridge-aligned lesson plans using Google's **Gemini 3.7 Flash** and **Firebase** infrastructure operating on Google's perpetual **Free Tier ($0/month)**.
+**HecTech LPAuditor** is an enterprise-grade pedagogical auditing and compliance platform designed for schools and EdTech institutions. It automates compliance reviews for weekly Cambridge-aligned lesson plans using Google's **Gemini 3.8 Flash** and **Firebase** infrastructure operating on Google's perpetual **Free Tier ($0/month)**.
 
 ---
 
@@ -9,9 +9,9 @@
 * **Multimodal Document Analysis**: Direct ingestion and processing of `.pdf` and `.docx` lesson plans with progress tracking and IndexedDB offline queueing.
 * **Cambridge & Universal Pedagogical Rubrics**: Automated evaluation against Cambridge International Standards v2.1 across 10 subject departments, with automatic fallback to universal pedagogical rubrics for non-Cambridge or custom subjects.
 * **Mandatory 70% Resubmission Threshold**: Automatic status gating for any lesson plan scoring below **70%** (7.0/10), setting `RESUBMISSION_REQUIRED`, flagging critical compliance failures, and blocking HOD approval until a compliant revision is submitted.
-* **Interactive AI Auditor Chat**: Multi-turn chat assistant powered by `gemini-3.7-flash`, enabling teachers to ask specific questions about addressing compliance flags and boosting active student inquiry.
+* **Interactive AI Auditor Chat**: Multi-turn chat assistant powered by `gemini-3.8-flash`, enabling teachers to ask specific questions about addressing compliance flags and boosting active student inquiry.
 * **HOD & Admin Portal**: Department-level KPI tracking, real-time weekly executive briefings, side-by-side PDF preview, and CSV compliance report export.
-* **Automated Telegram Defaulter Alerts**: Cross-references faculty rosters with weekly submissions to detect defaulters, with automated Friday cron dispatches and on-demand alerts.
+* **Automated WhatsApp Defaulter Alerts & 1-Click Nudges**: Cross-references faculty rosters with weekly submissions to detect defaulters, with automated Friday cron dispatches and on-demand 1-click WhatsApp nudges.
 * **Strict Role-Based Access Control (RBAC)**: Enforced via Cloud Firestore security rules, Firebase Storage security rules, Next.js edge proxy (`proxy.ts`), and server action permission checks.
 
 ---
@@ -23,7 +23,7 @@
 * **Authentication**: Firebase Authentication with HTTP-only session cookies
 * **Database**: Cloud Firestore (NoSQL)
 * **File Vault**: Cloud Storage for Firebase
-* **AI Engine**: `@google/generative-ai` with **Gemini 3.7 Flash** (Structured JSON output + runtime Zod validation)
+* **AI Engine**: `@google/generative-ai` with **Gemini 3.8 Flash** (Structured JSON output + runtime Zod validation)
 * **Background Queue**: [Inngest](https://www.inngest.com/) step functions & cron triggers
 * **Testing**: Jest 30, React Testing Library, ts-node (25 unit/integration tests)
 

@@ -1,0 +1,1301 @@
+{
+  "activeFaculty": [
+    {
+      "id": "ae575ec3-09ee-49ee-acba-ce78e047a5ba",
+      "name": "Mrs. Promise Ankrah",
+      "email": "promise.ankrah@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Lower Primary",
+      "assigned_subjects": [
+        "English",
+        "Mathematics",
+        "Science"
+      ],
+      "assigned_classes": [
+        "Year 3A"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "English",
+          "className": "Year 3A"
+        },
+        {
+          "subject": "Mathematics",
+          "className": "Year 3A"
+        },
+        {
+          "subject": "Science",
+          "className": "Year 3A"
+        }
+      ],
+      "total_periods": 20
+    },
+    {
+      "id": "15b78fd0-07a5-4421-bc10-082c5b3426bc",
+      "name": "Mrs. Abigail Sackey",
+      "email": "abigailsackey@stadelaideschool.com",
+      "role": "HOD",
+      "roles": [
+        "TEACHER",
+        "HOD"
+      ],
+      "department": "Upper Primary",
+      "assigned_subjects": [
+        "Mathematics"
+      ],
+      "assigned_classes": [
+        "Year 5 (Streams A & B)"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "Mathematics",
+          "className": "Year 5 (Streams A & B)"
+        }
+      ],
+      "total_periods": 16
+    },
+    {
+      "id": "686ef2ad-23dc-4698-992d-828dac199a91",
+      "name": "Mr. Ayiku",
+      "email": "hectoraryiku@stadelaideschool.com",
+      "role": "ADMIN",
+      "roles": [
+        "TEACHER",
+        "ADMIN"
+      ],
+      "department": "ICT",
+      "assigned_subjects": [
+        "ICT"
+      ],
+      "assigned_classes": [
+        "Year 5 (Streams A & B)",
+        "Year 6 (Streams A & B)",
+        "Year 7 (Streams A & B)",
+        "Year 8"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "ICT",
+          "className": "Year 5 (Streams A & B)"
+        },
+        {
+          "subject": "ICT",
+          "className": "Year 6 (Streams A & B)"
+        },
+        {
+          "subject": "ICT",
+          "className": "Year 7 (Streams A & B)"
+        },
+        {
+          "subject": "ICT",
+          "className": "Year 8"
+        }
+      ],
+      "total_periods": 21
+    },
+    {
+      "id": "574dcbc3-93dc-4758-be37-1d9d7350ba2d",
+      "name": "Mr. Derrick Thompson",
+      "email": "derrick.thompson@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Upper Primary",
+      "assigned_subjects": [
+        "ICT"
+      ],
+      "assigned_classes": [
+        "Year 1A",
+        "Year 2 (Streams A & B)",
+        "Year 3 (Streams A & B)",
+        "Year 4 (Streams A & B)"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "ICT",
+          "className": "Year 1A"
+        },
+        {
+          "subject": "ICT",
+          "className": "Year 2 (Streams A & B)"
+        },
+        {
+          "subject": "ICT",
+          "className": "Year 3 (Streams A & B)"
+        },
+        {
+          "subject": "ICT",
+          "className": "Year 4 (Streams A & B)"
+        }
+      ],
+      "total_periods": 21
+    },
+    {
+      "id": "e8dc56e2-0d42-432d-8a0c-ccd6cc4db220",
+      "name": "Mr. James Tettey",
+      "email": "james.tettey@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Lower Secondary",
+      "assigned_subjects": [
+        "French"
+      ],
+      "assigned_classes": [
+        "Year 6B",
+        "Year 7 (Streams A & B)",
+        "Year 8"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "French",
+          "className": "Year 6B"
+        },
+        {
+          "subject": "French",
+          "className": "Year 7 (Streams A & B)"
+        },
+        {
+          "subject": "French",
+          "className": "Year 8"
+        }
+      ],
+      "total_periods": 16
+    },
+    {
+      "id": "40e264eb-ad44-4acb-aa35-07e0e7c997fb",
+      "name": "Mr. Joseph Liman",
+      "email": "joseph.liman@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Lower Primary",
+      "assigned_subjects": [
+        "French"
+      ],
+      "assigned_classes": [
+        "Year 1A",
+        "Year 2 (Streams A & B)",
+        "Year 3 (Streams A & B)"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "French",
+          "className": "Year 1A"
+        },
+        {
+          "subject": "French",
+          "className": "Year 2 (Streams A & B)"
+        },
+        {
+          "subject": "French",
+          "className": "Year 3 (Streams A & B)"
+        }
+      ],
+      "total_periods": 20
+    },
+    {
+      "id": "cd19763e-bc68-403a-a61b-3d8872dc456b",
+      "name": "Mrs. Victoria Ansah",
+      "email": "victoria.ansah@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "General",
+      "assigned_subjects": [
+        "PSHE"
+      ],
+      "assigned_classes": [
+        "Year 1A",
+        "Year 2 (Streams A & B)",
+        "Year 3 (Streams A & B)",
+        "Year 4 (Streams A & B)",
+        "Year 5 (Streams A & B)",
+        "Year 6 (Streams A & B)",
+        "Year 7 (Streams A & B)",
+        "Year 8"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "PSHE",
+          "className": "Year 1A"
+        },
+        {
+          "subject": "PSHE",
+          "className": "Year 2 (Streams A & B)"
+        },
+        {
+          "subject": "PSHE",
+          "className": "Year 3 (Streams A & B)"
+        },
+        {
+          "subject": "PSHE",
+          "className": "Year 4 (Streams A & B)"
+        },
+        {
+          "subject": "PSHE",
+          "className": "Year 5 (Streams A & B)"
+        },
+        {
+          "subject": "PSHE",
+          "className": "Year 6 (Streams A & B)"
+        },
+        {
+          "subject": "PSHE",
+          "className": "Year 7 (Streams A & B)"
+        },
+        {
+          "subject": "PSHE",
+          "className": "Year 8"
+        }
+      ],
+      "total_periods": 14
+    },
+    {
+      "id": "46776708-a3db-479d-959b-4e5e5149ab99",
+      "name": "Samuel",
+      "email": "samuel@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "General",
+      "assigned_subjects": [
+        "Robotics"
+      ],
+      "assigned_classes": [
+        "Year 1A",
+        "Year 2 (Streams A & B)",
+        "Year 3 (Streams A & B)",
+        "Year 4 (Streams A & B)"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "Robotics",
+          "className": "Year 1A"
+        },
+        {
+          "subject": "Robotics",
+          "className": "Year 2 (Streams A & B)"
+        },
+        {
+          "subject": "Robotics",
+          "className": "Year 3 (Streams A & B)"
+        },
+        {
+          "subject": "Robotics",
+          "className": "Year 4 (Streams A & B)"
+        }
+      ],
+      "total_periods": 14
+    },
+    {
+      "id": "2dfe7d2c-0c34-403a-a7fd-83ed9357732a",
+      "name": "Mariama Zachari",
+      "email": "mariama.zachari@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "General",
+      "assigned_subjects": [
+        "Library"
+      ],
+      "assigned_classes": [
+        "Year 1A",
+        "Year 2 (Streams A & B)",
+        "Year 3 (Streams A & B)",
+        "Year 4 (Streams A & B)",
+        "Year 5 (Streams A & B)"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "Library",
+          "className": "Year 1A"
+        },
+        {
+          "subject": "Library",
+          "className": "Year 2 (Streams A & B)"
+        },
+        {
+          "subject": "Library",
+          "className": "Year 3 (Streams A & B)"
+        },
+        {
+          "subject": "Library",
+          "className": "Year 4 (Streams A & B)"
+        },
+        {
+          "subject": "Library",
+          "className": "Year 5 (Streams A & B)"
+        }
+      ],
+      "total_periods": 18
+    },
+    {
+      "id": "b8a88c33-33a0-425e-882d-b14e28d8dc17",
+      "name": "Mrs. Pauline Asante-Nti",
+      "email": "pauline.asante-nti@stadelaideschool.com",
+      "role": "HOD",
+      "roles": [
+        "TEACHER",
+        "HOD"
+      ],
+      "department": "Lower Primary",
+      "assigned_subjects": [
+        "English"
+      ],
+      "assigned_classes": [
+        "Year 6 (Streams A & B)"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "English",
+          "className": "Year 6 (Streams A & B)"
+        }
+      ],
+      "total_periods": 16
+    },
+    {
+      "id": "94512631-b509-43b6-814e-7484cece16b8",
+      "name": "Mrs. Erica Frempong Eyiah",
+      "email": "erica.frempong.eyiah@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Lower Primary",
+      "assigned_subjects": [
+        "English",
+        "Mathematics",
+        "Science"
+      ],
+      "assigned_classes": [
+        "Year 2B"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "English",
+          "className": "Year 2B"
+        },
+        {
+          "subject": "Mathematics",
+          "className": "Year 2B"
+        },
+        {
+          "subject": "Science",
+          "className": "Year 2B"
+        }
+      ],
+      "total_periods": 20
+    },
+    {
+      "id": "ea0a3499-9260-47b8-a122-863d9d7dcfe9",
+      "name": "Mrs. Vida Darko Mensah",
+      "email": "vida.darko.mensah@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Lower Primary",
+      "assigned_subjects": [
+        "English",
+        "Mathematics",
+        "Science"
+      ],
+      "assigned_classes": [
+        "Year 1A"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "English",
+          "className": "Year 1A"
+        },
+        {
+          "subject": "Mathematics",
+          "className": "Year 1A"
+        },
+        {
+          "subject": "Science",
+          "className": "Year 1A"
+        }
+      ],
+      "total_periods": 20
+    },
+    {
+      "id": "7a54ca1e-aa2d-4240-afd9-7f5114b7ba19",
+      "name": "Mrs. Serwaa Sampson",
+      "email": "serwaa.sampson@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Upper Primary",
+      "assigned_subjects": [
+        "Mathematics"
+      ],
+      "assigned_classes": [
+        "Year 4 (Streams A & B)"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "Mathematics",
+          "className": "Year 4 (Streams A & B)"
+        }
+      ],
+      "total_periods": 16
+    },
+    {
+      "id": "cb8b2bae-d76f-436e-9795-3634df75dc62",
+      "name": "Miss Roselyn Otabil",
+      "email": "roselyn.otabil@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Lower Primary",
+      "assigned_subjects": [
+        "BK",
+        "Humanities"
+      ],
+      "assigned_classes": [
+        "Year 1A"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "BK",
+          "className": "Year 1A"
+        },
+        {
+          "subject": "Humanities",
+          "className": "Year 1A"
+        }
+      ],
+      "total_periods": 5
+    },
+    {
+      "id": "37abce7c-6672-447e-8a10-365125d1259a",
+      "name": "Ms. Anita Bilekyi",
+      "email": "anita.bilekyi@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Upper Primary",
+      "assigned_subjects": [
+        "Library",
+        "Literature"
+      ],
+      "assigned_classes": [
+        "Year 6 (Streams A & B)",
+        "Year 7 (Streams A & B)",
+        "Year 8"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "Library",
+          "className": "Year 6 (Streams A & B)"
+        },
+        {
+          "subject": "Library",
+          "className": "Year 7 (Streams A & B)"
+        },
+        {
+          "subject": "Library",
+          "className": "Year 8"
+        },
+        {
+          "subject": "Literature",
+          "className": "Year 7 (Streams A & B)"
+        },
+        {
+          "subject": "Literature",
+          "className": "Year 8"
+        }
+      ],
+      "total_periods": 19
+    },
+    {
+      "id": "ca4061c4-7426-4d1b-b307-c1cf7e10e897",
+      "name": "Dorcas Egbetta",
+      "email": "dorcas.egbetta@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Lower Primary",
+      "assigned_subjects": [
+        "English",
+        "Humanities"
+      ],
+      "assigned_classes": [
+        "Year 3B"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "English",
+          "className": "Year 3B"
+        },
+        {
+          "subject": "Humanities",
+          "className": "Year 3B"
+        }
+      ],
+      "total_periods": 11
+    },
+    {
+      "id": "5e9d5d9d-af48-43b9-9bd0-41504072a08b",
+      "name": "Mrs. Evelyn Bonnie",
+      "email": "evelyn.bonnie@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Lower Secondary",
+      "assigned_subjects": [
+        "Arts"
+      ],
+      "assigned_classes": [
+        "Year 3 (Streams A & B)",
+        "Year 4 (Streams A & B)",
+        "Year 5 (Streams A & B)",
+        "Year 6 (Streams A & B)",
+        "Year 7 (Streams A & B)",
+        "Year 8"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "Arts",
+          "className": "Year 3 (Streams A & B)"
+        },
+        {
+          "subject": "Arts",
+          "className": "Year 4 (Streams A & B)"
+        },
+        {
+          "subject": "Arts",
+          "className": "Year 5 (Streams A & B)"
+        },
+        {
+          "subject": "Arts",
+          "className": "Year 6 (Streams A & B)"
+        },
+        {
+          "subject": "Arts",
+          "className": "Year 7 (Streams A & B)"
+        },
+        {
+          "subject": "Arts",
+          "className": "Year 8"
+        }
+      ],
+      "total_periods": 22
+    },
+    {
+      "id": "90836c2e-cd90-4309-993e-341a2e50d46e",
+      "name": "Mr. Eric Dzidzornu",
+      "email": "eric.dzidzornu@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Lower Primary",
+      "assigned_subjects": [
+        "Arts"
+      ],
+      "assigned_classes": [
+        "Year 1A",
+        "Year 2 (Streams A & B)"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "Arts",
+          "className": "Year 1A"
+        },
+        {
+          "subject": "Arts",
+          "className": "Year 2 (Streams A & B)"
+        }
+      ],
+      "total_periods": 6
+    },
+    {
+      "id": "3ebfd82f-06ee-4f97-b546-1afe21e95abd",
+      "name": "Mr. William Dickson",
+      "email": "william.dickson@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Upper Primary",
+      "assigned_subjects": [
+        "Music"
+      ],
+      "assigned_classes": [
+        "Year 1A",
+        "Year 2 (Streams A & B)",
+        "Year 3 (Streams A & B)",
+        "Year 4 (Streams A & B)",
+        "Year 5 (Streams A & B)",
+        "Year 6 (Streams A & B)"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "Music",
+          "className": "Year 1A"
+        },
+        {
+          "subject": "Music",
+          "className": "Year 2 (Streams A & B)"
+        },
+        {
+          "subject": "Music",
+          "className": "Year 3 (Streams A & B)"
+        },
+        {
+          "subject": "Music",
+          "className": "Year 4 (Streams A & B)"
+        },
+        {
+          "subject": "Music",
+          "className": "Year 5 (Streams A & B)"
+        },
+        {
+          "subject": "Music",
+          "className": "Year 6 (Streams A & B)"
+        }
+      ],
+      "total_periods": 22
+    },
+    {
+      "id": "0de0b3e7-aa0f-4f5e-96bb-e59eb9fedf57",
+      "name": "Miss Gloria Cofie",
+      "email": "gloria.cofie@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Upper Primary",
+      "assigned_subjects": [
+        "Science"
+      ],
+      "assigned_classes": [
+        "Year 4 (Streams A & B)",
+        "Year 5 (Streams A & B)"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "Science",
+          "className": "Year 4 (Streams A & B)"
+        },
+        {
+          "subject": "Science",
+          "className": "Year 5 (Streams A & B)"
+        }
+      ],
+      "total_periods": 16
+    },
+    {
+      "id": "202d1db0-bd06-44c5-baac-504fe528636c",
+      "name": "Mrs. Joana Asiedua Amoh-Barimah",
+      "email": "joana.asiedua.amoh-barimah@stadelaideschool.com",
+      "role": "HOD",
+      "roles": [
+        "TEACHER",
+        "HOD"
+      ],
+      "department": "Lower Secondary",
+      "assigned_subjects": [
+        "English"
+      ],
+      "assigned_classes": [
+        "Year 7 (Streams A & B)",
+        "Year 8"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "English",
+          "className": "Year 7 (Streams A & B)"
+        },
+        {
+          "subject": "English",
+          "className": "Year 8"
+        }
+      ],
+      "total_periods": 18
+    },
+    {
+      "id": "af9441f6-95de-4c15-a18f-8325e019b9b2",
+      "name": "Mary Sekafa",
+      "email": "mary.sekafa@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Lower Primary",
+      "assigned_subjects": [
+        "BK",
+        "English",
+        "Humanities"
+      ],
+      "assigned_classes": [
+        "Year 2A"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "BK",
+          "className": "Year 2A"
+        },
+        {
+          "subject": "English",
+          "className": "Year 2A"
+        },
+        {
+          "subject": "Humanities",
+          "className": "Year 2A"
+        }
+      ],
+      "total_periods": 13
+    },
+    {
+      "id": "9f73378d-aa09-4516-bf2b-aa0f2bd3b754",
+      "name": "Mrs. Dorcas Livingston",
+      "email": "dorcas.livingston@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Upper Primary",
+      "assigned_subjects": [
+        "BK",
+        "English"
+      ],
+      "assigned_classes": [
+        "Year 4 (Streams A & B)"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "BK",
+          "className": "Year 4 (Streams A & B)"
+        },
+        {
+          "subject": "English",
+          "className": "Year 4 (Streams A & B)"
+        }
+      ],
+      "total_periods": 20
+    },
+    {
+      "id": "187486f5-490f-4f29-bc16-c3eaaec96720",
+      "name": "Mrs. Ama Kwatsewaa Opong-Nyarko",
+      "email": "ama.kwatsewaa.opong-nyarko@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Lower Secondary",
+      "assigned_subjects": [
+        "Biology",
+        "Chemistry"
+      ],
+      "assigned_classes": [
+        "Year 7 (Streams A & B)",
+        "Year 8"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "Biology",
+          "className": "Year 7 (Streams A & B)"
+        },
+        {
+          "subject": "Biology",
+          "className": "Year 8"
+        },
+        {
+          "subject": "Chemistry",
+          "className": "Year 7 (Streams A & B)"
+        },
+        {
+          "subject": "Chemistry",
+          "className": "Year 8"
+        }
+      ],
+      "total_periods": 24
+    },
+    {
+      "id": "6afdf545-5fea-4236-ba73-e33c7bfb4269",
+      "name": "Mr. Sebastian Adu",
+      "email": "sebastian.adu@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Lower Secondary",
+      "assigned_subjects": [
+        "Humanities",
+        "Geography"
+      ],
+      "assigned_classes": [
+        "Year 6 (Streams A & B)",
+        "Year 7 (Streams A & B)",
+        "Year 8"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "Humanities",
+          "className": "Year 6 (Streams A & B)"
+        },
+        {
+          "subject": "Geography",
+          "className": "Year 7 (Streams A & B)"
+        },
+        {
+          "subject": "Geography",
+          "className": "Year 8"
+        }
+      ],
+      "total_periods": 18
+    },
+    {
+      "id": "bdb641ea-4038-4ad3-b329-34080de4e5c0",
+      "name": "Mr. Jerome Batalina",
+      "email": "jerome.batalina@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Upper Primary",
+      "assigned_subjects": [
+        "French"
+      ],
+      "assigned_classes": [
+        "Year 4 (Streams A & B)",
+        "Year 5 (Streams A & B)",
+        "Year 6A"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "French",
+          "className": "Year 4 (Streams A & B)"
+        },
+        {
+          "subject": "French",
+          "className": "Year 5 (Streams A & B)"
+        },
+        {
+          "subject": "French",
+          "className": "Year 6A"
+        }
+      ],
+      "total_periods": 20
+    },
+    {
+      "id": "e88c24c7-6892-4c01-bf94-61095a140e2e",
+      "name": "Francisca Fukour",
+      "email": "francisca.fukour@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Lower Primary",
+      "assigned_subjects": [
+        "BK",
+        "Humanities"
+      ],
+      "assigned_classes": [
+        "Year 2B"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "BK",
+          "className": "Year 2B"
+        },
+        {
+          "subject": "Humanities",
+          "className": "Year 2B"
+        }
+      ],
+      "total_periods": 5
+    },
+    {
+      "id": "716dbf47-5f16-4280-95eb-90a7a015aaf1",
+      "name": "Miss Bridget Boboli",
+      "email": "bridget.boboli@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Lower Secondary",
+      "assigned_subjects": [
+        "Mathematics"
+      ],
+      "assigned_classes": [
+        "Year 7 (Streams A & B)",
+        "Year 8"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "Mathematics",
+          "className": "Year 7 (Streams A & B)"
+        },
+        {
+          "subject": "Mathematics",
+          "className": "Year 8"
+        }
+      ],
+      "total_periods": 18
+    },
+    {
+      "id": "e1c41427-f0f5-49bf-92c1-06e20a857c3f",
+      "name": "Miss Ruth Lartey",
+      "email": "ruth.lartey@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "General",
+      "assigned_subjects": [
+        "PE"
+      ],
+      "assigned_classes": [
+        "Year 1A",
+        "Year 2 (Joint)",
+        "Year 3 (Joint)",
+        "Year 4 (Joint)",
+        "Year 5 (Joint)",
+        "Year 6 (Joint)",
+        "Year 7 (Joint)",
+        "Year 8"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "PE",
+          "className": "Year 1A"
+        },
+        {
+          "subject": "PE",
+          "className": "Year 2 (Joint)"
+        },
+        {
+          "subject": "PE",
+          "className": "Year 3 (Joint)"
+        },
+        {
+          "subject": "PE",
+          "className": "Year 4 (Joint)"
+        },
+        {
+          "subject": "PE",
+          "className": "Year 5 (Joint)"
+        },
+        {
+          "subject": "PE",
+          "className": "Year 6 (Joint)"
+        },
+        {
+          "subject": "PE",
+          "className": "Year 7 (Joint)"
+        },
+        {
+          "subject": "PE",
+          "className": "Year 8"
+        }
+      ],
+      "total_periods": 28
+    },
+    {
+      "id": "3de53614-0742-4fcf-89c5-693e62c70b1e",
+      "name": "Gifty",
+      "email": "gifty@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "General",
+      "assigned_subjects": [
+        "Robotics"
+      ],
+      "assigned_classes": [
+        "Year 5 (Streams A & B)",
+        "Year 6 (Streams A & B)",
+        "Year 7 (Streams A & B)",
+        "Year 8"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "Robotics",
+          "className": "Year 5 (Streams A & B)"
+        },
+        {
+          "subject": "Robotics",
+          "className": "Year 6 (Streams A & B)"
+        },
+        {
+          "subject": "Robotics",
+          "className": "Year 7 (Streams A & B)"
+        },
+        {
+          "subject": "Robotics",
+          "className": "Year 8"
+        }
+      ],
+      "total_periods": 14
+    },
+    {
+      "id": "42a88cd9-6612-4460-95b4-799b2a37184f",
+      "name": "Augustina Baah",
+      "email": "augustina.baah@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Lower Primary",
+      "assigned_subjects": [
+        "Mathematics",
+        "Science"
+      ],
+      "assigned_classes": [
+        "Year 2A"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "Mathematics",
+          "className": "Year 2A"
+        },
+        {
+          "subject": "Science",
+          "className": "Year 2A"
+        }
+      ],
+      "total_periods": 12
+    },
+    {
+      "id": "e3e35850-46ae-48b2-a125-399b7222a4e0",
+      "name": "Abigail Andoh",
+      "email": "abigail.andoh@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Upper Primary",
+      "assigned_subjects": [
+        "BK",
+        "English"
+      ],
+      "assigned_classes": [
+        "Year 5 (Streams A & B)"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "BK",
+          "className": "Year 5 (Streams A & B)"
+        },
+        {
+          "subject": "English",
+          "className": "Year 5 (Streams A & B)"
+        }
+      ],
+      "total_periods": 20
+    },
+    {
+      "id": "69b87726-d2d1-4472-af5a-f311524c42c8",
+      "name": "Mrs. Dorcas Addy",
+      "email": "dorcas.addy@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Lower Secondary",
+      "assigned_subjects": [
+        "BK",
+        "Humanities",
+        "History"
+      ],
+      "assigned_classes": [
+        "Year 3A",
+        "Year 7 (Streams A & B)",
+        "Year 8"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "BK",
+          "className": "Year 3A"
+        },
+        {
+          "subject": "Humanities",
+          "className": "Year 3A"
+        },
+        {
+          "subject": "History",
+          "className": "Year 7 (Streams A & B)"
+        },
+        {
+          "subject": "History",
+          "className": "Year 8"
+        }
+      ],
+      "total_periods": 17
+    },
+    {
+      "id": "2fdf0d71-bb37-497a-8d3a-341304200d75",
+      "name": "Mrs. Veronica Agyekum Wire",
+      "email": "veronica.agyekum.wire@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Lower Primary",
+      "assigned_subjects": [
+        "BK",
+        "Mathematics",
+        "Science"
+      ],
+      "assigned_classes": [
+        "Year 3B"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "BK",
+          "className": "Year 3B"
+        },
+        {
+          "subject": "Mathematics",
+          "className": "Year 3B"
+        },
+        {
+          "subject": "Science",
+          "className": "Year 3B"
+        }
+      ],
+      "total_periods": 14
+    },
+    {
+      "id": "7779b458-842a-45db-a078-c4b1c122a5c8",
+      "name": "Mr. Dickson Narh",
+      "email": "dickson.narh@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Upper Primary",
+      "assigned_subjects": [
+        "Science",
+        "Physics"
+      ],
+      "assigned_classes": [
+        "Year 6 (Streams A & B)",
+        "Year 7 (Streams A & B)",
+        "Year 8"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "Science",
+          "className": "Year 6 (Streams A & B)"
+        },
+        {
+          "subject": "Physics",
+          "className": "Year 7 (Streams A & B)"
+        },
+        {
+          "subject": "Physics",
+          "className": "Year 8"
+        }
+      ],
+      "total_periods": 20
+    },
+    {
+      "id": "8988bc8c-3d94-497b-ba78-b8a1b3924f69",
+      "name": "Felix Agyemang Kumoji",
+      "email": "felix.agyemang.kumoji@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Upper Primary",
+      "assigned_subjects": [
+        "Humanities",
+        "BK"
+      ],
+      "assigned_classes": [
+        "Year 4 (Streams A & B)",
+        "Year 5 (Streams A & B)",
+        "Year 6 (Streams A & B)"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "Humanities",
+          "className": "Year 4 (Streams A & B)"
+        },
+        {
+          "subject": "Humanities",
+          "className": "Year 5 (Streams A & B)"
+        },
+        {
+          "subject": "BK",
+          "className": "Year 6 (Streams A & B)"
+        }
+      ],
+      "total_periods": 16
+    },
+    {
+      "id": "eacfe7c1-872a-4898-bce3-5c2bf76d7276",
+      "name": "Jacqueline Somuah",
+      "email": "jacqueline.somuah@stadelaideschool.com",
+      "role": "TEACHER",
+      "roles": [
+        "TEACHER"
+      ],
+      "department": "Upper Primary",
+      "assigned_subjects": [
+        "Mathematics"
+      ],
+      "assigned_classes": [
+        "Year 6 (Streams A & B)"
+      ],
+      "expected_quotas": [
+        {
+          "subject": "Mathematics",
+          "className": "Year 6 (Streams A & B)"
+        }
+      ],
+      "total_periods": 16
+    }
+  ],
+  "zeroQuotaFaculty": [
+    {
+      "id": "admin-prince-dunyoh",
+      "name": "Prince Dunyoh",
+      "email": "princedunyoh@stadelaideschool.com",
+      "role": "ADMIN",
+      "roles": [
+        "ADMIN"
+      ],
+      "department": "Administration",
+      "assigned_subjects": [],
+      "assigned_classes": [],
+      "expected_quotas": [],
+      "total_periods": 0
+    },
+    {
+      "id": "admin-theodora-hammond",
+      "name": "Theodora Hammond",
+      "email": "theodorahammond@stadelaideschool.com",
+      "role": "ADMIN",
+      "roles": [
+        "ADMIN"
+      ],
+      "department": "Administration",
+      "assigned_subjects": [],
+      "assigned_classes": [],
+      "expected_quotas": [],
+      "total_periods": 0
+    }
+  ]
+}

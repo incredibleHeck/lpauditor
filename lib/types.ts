@@ -84,10 +84,20 @@ export interface SubmissionContext {
   hod_updated_by?: string | null;
 }
 
+export interface ExpectedQuota {
+  subject: string;
+  className: string;
+}
+
 export interface UserProfile {
+  id?: string;
   full_name: string;
+  email?: string;
   role: "TEACHER" | "HOD" | "ADMIN" | string;
   department: string | null;
+  assigned_subjects?: string[];
+  assigned_classes?: string[];
+  expected_quotas?: ExpectedQuota[];
 }
 
 export type HodDecision = "APPROVED" | "REVISION_REQUESTED" | "NEEDS_OBSERVATION";

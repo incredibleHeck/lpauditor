@@ -4,7 +4,9 @@ service cloud.firestore {
     
     // Helper Functions
     function isAuthenticated() {
-      return request.auth != null && request.auth.token.email.matches('.*@stadelaideschool\\.com$');
+      return request.auth != null && 
+             request.auth.token.email_verified == true && 
+             request.auth.token.email.matches('.*@stadelaideschool\\.com$');
     }
     
     function isOwner(userId) {
@@ -15,12 +17,11 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data;
     }
 
-    function isDesignatedAdminEmail(email) {
-      return email.matches('(theodorahammond|hectoraryiku|abigailsackey)@stadelaideschool\\.com$');
-    }
-
     function isAdmin() {
-      return isAuthenticated() && (getUserData().role == 'ADMIN' || isDesignatedAdminEmail(request.auth.token.email));
+      return isAuthenticated() && (
+        request.auth.token.admin == true || 
+        getUserData().role == 'ADMIN'
+      );
     }
 
     function isHODForSubject(subject) {
@@ -35,11 +36,8 @@ service cloud.firestore {
     // Profiles Collection
     match /profiles/{userId} {
       allow read: if isAuthenticated();
-      // Allow initial profile creation by owner: regular users must default to TEACHER role, designated admins can be ADMIN
-      allow create: if isOwner(userId) && (
-        request.resource.data.role == 'TEACHER' ||
-        (request.resource.data.role == 'ADMIN' && isDesignatedAdminEmail(request.auth.token.email))
-      );
+      // Allow initial profile creation by owner: regular users must default strictly to TEACHER role
+      allow create: if isOwner(userId) && request.resource.data.role == 'TEACHER';
       allow update: if isOwner(userId) && 
         request.resource.data.role == resource.data.role &&
         request.resource.data.department == resource.data.department;

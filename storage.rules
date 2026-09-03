@@ -2,7 +2,9 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     function isStAdelaideUser() {
-      return request.auth != null && request.auth.token.email.matches('.*@stadelaideschool\\.com$');
+      return request.auth != null && 
+             request.auth.token.email_verified == true && 
+             request.auth.token.email.matches('.*@stadelaideschool\\.com$');
     }
 
     match /lesson-plans/{userId}/{allPaths=**} {
@@ -15,7 +17,10 @@ service firebase.storage {
           firestore.get(/databases/(default)/documents/profiles/$(request.auth.uid)).data.department == firestore.get(/databases/(default)/documents/profiles/$(userId)).data.department
         )
       );
-      allow write: if isStAdelaideUser() && request.auth.uid == userId;
+      allow write: if isStAdelaideUser() && 
+        request.auth.uid == userId &&
+        request.resource.size < 10 * 1024 * 1024 &&
+        request.resource.contentType.matches('application/(pdf|vnd\\.openxmlformats-officedocument\\.wordprocessingml\\.document)');
     }
   }
 }
