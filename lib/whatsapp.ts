@@ -8,6 +8,7 @@ import { ExpectedQuota } from "./types";
 export interface WhatsAppSendResult {
   success: boolean;
   messageId?: string;
+  mocked?: boolean;
   simulated?: boolean;
   error?: string;
 }
@@ -36,22 +37,22 @@ export interface DefaulterReportData {
 }
 
 /**
- * Normalizes a Ghanaian or international phone number for WhatsApp
- * e.g. "024 123 4567" -> "233241234567"
- * e.g. "+233 24 123 4567" -> "233241234567"
+ * Normalizes a Ghanaian phone number to the international E.164 standard (e.g. 23324XXXXXXX).
+ * Strips whitespace, dashes, and non-digit characters.
+ * Automatically converts Ghanaian local prefixes (e.g. 024..., 050..., 020...) to 233...
  */
-export function normalizeWhatsAppPhoneNumber(phone?: string | null): string {
+export function normalizeGhanaPhoneNumber(phone?: string | null): string {
   if (!phone) return "";
-  // Remove all non-digits
+  // Strip non-digit characters
   const digits = phone.replace(/\D/g, "");
   if (!digits) return "";
 
-  // If local Ghana number starting with 0 (e.g. 024..., 050..., 020...)
+  // If local Ghana number starting with 0 (e.g. 024XXXXXXX - 10 digits)
   if (digits.startsWith("0") && digits.length === 10) {
     return `233${digits.substring(1)}`;
   }
 
-  // If already starts with 233
+  // If already prefixed with 233
   if (digits.startsWith("233")) {
     return digits;
   }
@@ -60,10 +61,43 @@ export function normalizeWhatsAppPhoneNumber(phone?: string | null): string {
 }
 
 /**
- * Formats a comprehensive lesson plan compliance report using WhatsApp markdown
- * WhatsApp formatting: *bold*, _italic_, ~strikethrough~
+ * Backward-compatible alias for normalizeGhanaPhoneNumber
  */
-export function formatDefaultersWhatsAppMessage(report: DefaulterReportData): string {
+export const normalizeWhatsAppPhoneNumber = normalizeGhanaPhoneNumber;
+
+/**
+ * Splits a long WhatsApp message into chunks strictly below 4,096 characters per bubble.
+ */
+export function splitWhatsAppMessage(message: string, maxChunkLength: number = 4000): string[] {
+  if (!message) return [];
+  if (message.length <= maxChunkLength) return [message];
+
+  const lines = message.split("\n");
+  const chunks: string[] = [];
+  let currentChunk = "";
+
+  for (const line of lines) {
+    if ((currentChunk + "\n" + line).length > maxChunkLength && currentChunk.length > 0) {
+      chunks.push(currentChunk.trim());
+      currentChunk = line;
+    } else {
+      currentChunk = currentChunk ? `${currentChunk}\n${line}` : line;
+    }
+  }
+
+  if (currentChunk.trim().length > 0) {
+    chunks.push(currentChunk.trim());
+  }
+
+  return chunks;
+}
+
+/**
+ * Formats a comprehensive lesson plan compliance report using WhatsApp markdown (*bold*, _italic_).
+ * Categorizes into Compliant, Partially Submitted (with exact missing classes), and Defaulters.
+ * Enforces Meta WhatsApp message character bounds (<4,096 characters per bubble).
+ */
+export function formatWhatsAppDefaultersMessage(report: DefaulterReportData): string {
   const {
     weekName,
     deadlineDate,
@@ -83,7 +117,7 @@ export function formatDefaultersWhatsAppMessage(report: DefaulterReportData): st
 
   const lines: string[] = [];
 
-  // Header
+  // Institutional Header
   lines.push(`📚 *${SCHOOL_NAME}*`);
   lines.push(`📋 *Weekly Lesson Plan Compliance Report — ${weekName}*`);
   lines.push(`⏰ *Deadline:* ${deadlineDate}`);
@@ -105,7 +139,7 @@ export function formatDefaultersWhatsAppMessage(report: DefaulterReportData): st
     return lines.join("\n");
   }
 
-  // Partially Submitted Faculty Section
+  // Partially Submitted Faculty Section (Exact missing classes)
   if (partiallySubmitted.length > 0) {
     lines.push(`⚠️ *Partially Submitted Faculty (${partiallySubmitted.length}):*`);
     partiallySubmitted.forEach((t) => {
@@ -128,17 +162,31 @@ export function formatDefaultersWhatsAppMessage(report: DefaulterReportData): st
     lines.push("");
   }
 
-  // Action Notice
+  // Action Notice & Institutional Portal
   lines.push("⚠️ *Action Required:* Faculty with missing plans are requested to upload their curriculum on the portal immediately.");
   lines.push("🔗 *Portal:* https://lpauditor.stadelaideschool.com");
 
-  return lines.join("\n");
+  let fullMessage = lines.join("\n");
+
+  // Enforce Meta WhatsApp message character bounds (<4,096 characters per bubble)
+  if (fullMessage.length > 4000) {
+    fullMessage =
+      fullMessage.slice(0, 3800) +
+      `\n\n... _[Report truncated due to WhatsApp character limits. View complete breakdown on the LPAuditor portal.]_`;
+  }
+
+  return fullMessage;
 }
 
 /**
- * Generates a 1-Click WhatsApp Nudge URL (wa.me link)
+ * Backward-compatible alias for formatWhatsAppDefaultersMessage
+ */
+export const formatDefaultersWhatsAppMessage = formatWhatsAppDefaultersMessage;
+
+/**
+ * Generates a 1-Click WhatsApp Nudge URL (wa.me link).
  * Opens WhatsApp directly with a pre-filled professional reminder.
- * Requires ZERO API keys or tokens.
+ * Format: https://wa.me/${cleanPhone}?text=${encodedText}
  */
 export function generateWhatsAppNudgeUrl(
   phone: string,
@@ -146,63 +194,89 @@ export function generateWhatsAppNudgeUrl(
   missingQuotas: ExpectedQuota[] = [],
   weekName: string = "this week"
 ): string {
-  const normalizedPhone = normalizeWhatsAppPhoneNumber(phone);
-  if (!normalizedPhone) return "";
+  const cleanPhone = normalizeGhanaPhoneNumber(phone);
+  if (!cleanPhone) return "";
 
   let missingText = "";
   if (missingQuotas.length > 0) {
-    const list = missingQuotas.map((q) => `${q.className} ${q.subject}`).join(", ");
+    const list = missingQuotas.map((q) => `${q.className} ${q.subject}`).join(" and ");
     missingText = ` for *${list}*`;
   }
 
   const message =
     `Hello ${teacherName}, this is a polite reminder from the St. Adelaide Academic Office. ` +
-    `Your lesson plan submission${missingText} for *${weekName}* is pending on the portal.\n\n` +
+    `Please remember to submit your lesson plan${missingText} for *${weekName}* on the portal.\n\n` +
     `Kindly upload it before the close of day.\n` +
     `🔗 Portal Link: https://lpauditor.stadelaideschool.com`;
 
-  return `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`;
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
 
 /**
- * Sends a message via Meta WhatsApp Cloud API (Graph API)
- * If credentials are not configured, gracefully enters Simulated Mode.
+ * Dispatches a text message via the official Meta WhatsApp Cloud API (Graph API v20.0).
+ *
+ * Supports two calling conventions:
+ * 1. sendWhatsAppMessage(toPhone, messageBody)
+ * 2. sendWhatsAppMessage(messageBody) -> defaults to WHATSAPP_ADMIN_RECIPIENT_PHONE
+ *
+ * Graceful Unconfigured Fallback:
+ * If WHATSAPP_CLOUD_API_TOKEN or WHATSAPP_PHONE_NUMBER_ID is missing,
+ * logs a structured warning via lib/logger.ts and returns { success: true, mocked: true }.
  */
 export async function sendWhatsAppMessage(
-  text: string,
-  recipientOverride?: string
+  firstArg: string,
+  secondArg?: string
 ): Promise<WhatsAppSendResult> {
-  const apiToken = process.env.WHATSAPP_API_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const recipient =
-    recipientOverride ||
-    process.env.WHATSAPP_RECIPIENT_PHONE ||
-    process.env.WHATSAPP_ADMIN_PHONE;
+  let toPhone: string;
+  let messageBody: string;
 
-  // Graceful simulation mode when tokens are missing
-  if (!apiToken || !phoneNumberId || !recipient) {
-    logger.info(
+  if (secondArg !== undefined) {
+    toPhone = firstArg;
+    messageBody = secondArg;
+  } else {
+    toPhone =
+      process.env.WHATSAPP_ADMIN_RECIPIENT_PHONE ||
+      process.env.WHATSAPP_RECIPIENT_PHONE ||
+      process.env.WHATSAPP_ADMIN_PHONE ||
+      "";
+    messageBody = firstArg;
+  }
+
+  const apiToken = process.env.WHATSAPP_CLOUD_API_TOKEN || process.env.WHATSAPP_API_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+
+  // Graceful unconfigured fallback
+  if (!apiToken || !phoneNumberId) {
+    logger.warn(
       {
         hasToken: Boolean(apiToken),
         hasPhoneId: Boolean(phoneNumberId),
-        hasRecipient: Boolean(recipient),
-        messagePreview: text.substring(0, 100),
+        toPhone: toPhone ? normalizeGhanaPhoneNumber(toPhone) : "unconfigured",
       },
-      "Meta WhatsApp Cloud API credentials missing or not configured. Running in SIMULATED mode."
+      "Meta WhatsApp Cloud API credentials missing (WHATSAPP_CLOUD_API_TOKEN or WHATSAPP_PHONE_NUMBER_ID). Running in mocked mode."
     );
 
     return {
       success: true,
+      mocked: true,
       simulated: true,
-      messageId: `sim-wa-${Date.now()}`,
+      messageId: `mock-wa-${Date.now()}`,
     };
   }
 
-  const normalizedRecipient = normalizeWhatsAppPhoneNumber(recipient);
-  const url = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
+  const cleanE164Phone = normalizeGhanaPhoneNumber(toPhone);
+  if (!cleanE164Phone) {
+    logger.error({ toPhone }, "Invalid recipient phone number provided for WhatsApp dispatch");
+    return {
+      success: false,
+      error: "Invalid recipient phone number for WhatsApp dispatch",
+    };
+  }
+
+  const targetEndpoint = `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`;
 
   try {
-    const response = await fetch(url, {
+    const response = await fetch(targetEndpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiToken}`,
@@ -211,33 +285,33 @@ export async function sendWhatsAppMessage(
       body: JSON.stringify({
         messaging_product: "whatsapp",
         recipient_type: "individual",
-        to: normalizedRecipient,
+        to: cleanE164Phone,
         type: "text",
         text: {
-          preview_url: true,
-          body: text,
+          preview_url: false,
+          body: messageBody,
         },
       }),
     });
 
     if (!response.ok) {
       const errBody = await response.text();
-      logger.error({ status: response.status, body: errBody }, "Meta WhatsApp Cloud API request failed");
+      logger.error(
+        { status: response.status, body: errBody, endpoint: targetEndpoint },
+        "Meta WhatsApp Cloud API request failed"
+      );
       return {
         success: false,
-        error: `WhatsApp API error (${response.status}): ${errBody}`,
+        error: `Meta WhatsApp API error (${response.status}): ${errBody}`,
       };
     }
 
     const data = await response.json();
-    const messageId = data.messages?.[0]?.id;
+    const messageId = data.messages?.[0]?.id || `wa-msg-${Date.now()}`;
 
     logger.info(
-      {
-        recipient: normalizedRecipient,
-        messageId,
-      },
-      "Dispatched WhatsApp message successfully via Meta Cloud API"
+      { recipient: cleanE164Phone, messageId },
+      "Dispatched WhatsApp message successfully via Meta Cloud API v20.0"
     );
 
     return {
@@ -246,7 +320,7 @@ export async function sendWhatsAppMessage(
     };
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
-    logger.error({ error: errMsg }, "Failed to dispatch WhatsApp message");
+    logger.error({ error: errMsg }, "Exception while sending WhatsApp message via Meta Cloud API");
     return {
       success: false,
       error: errMsg,

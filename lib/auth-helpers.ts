@@ -76,7 +76,8 @@ export async function getAuthenticatedUser(idToken?: string): Promise<Authentica
     
     if (profileDoc.exists) {
       const data = profileDoc.data()!;
-      const userRole = isAdmin ? "ADMIN" : (data.role || "TEACHER");
+      // Strict role privilege separation: only verified admin emails can hold the ADMIN role
+      const userRole = isAdmin ? "ADMIN" : (data.role === "ADMIN" ? "TEACHER" : (data.role || "TEACHER"));
 
       // Auto-heal admin role in Firestore if missing
       if (isAdmin && data.role !== "ADMIN") {

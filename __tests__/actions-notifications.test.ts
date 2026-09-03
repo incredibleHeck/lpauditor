@@ -1,7 +1,6 @@
 import {
   getDefaultersReportAction,
   triggerWhatsAppDefaulterReportAction,
-  triggerTelegramDefaulterReportAction,
 } from "@/app/actions/notifications";
 
 jest.mock("@/lib/firebase-admin", () => ({
@@ -128,10 +127,6 @@ describe("Notifications & Defaulters Server Actions", () => {
         data: { weekName: "Week 2", triggeredBy: "admin@school.com", skipWhatsAppSend: true },
       });
       expect(result.whatsAppResult).toEqual({ success: true, messageId: "wa-999" });
-    });
-
-    it("should maintain backward-compatible alias triggerTelegramDefaulterReportAction", async () => {
-      expect(triggerTelegramDefaulterReportAction).toBe(triggerWhatsAppDefaulterReportAction);
     });
   });
 });

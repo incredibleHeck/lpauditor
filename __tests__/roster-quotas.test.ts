@@ -1,7 +1,7 @@
 import path from "path";
 import { parseFacultyFromFixture, deriveEmailFromName } from "@/scripts/seed-roster-from-fixture";
 import { getDefaultersReportForWeek, isQuotaSubmitted } from "@/lib/defaulters";
-import { formatDefaultersTelegramMessage, DefaulterReportData } from "@/lib/telegram";
+import { formatWhatsAppDefaultersMessage, DefaulterReportData } from "@/lib/whatsapp";
 
 // Mock firebase-admin
 const mockProfilesGet = jest.fn();
@@ -248,7 +248,7 @@ describe("Roster Seeding & Quota-Based Defaulter Engine", () => {
     });
   });
 
-  describe("formatDefaultersTelegramMessage", () => {
+  describe("formatWhatsAppDefaultersMessage", () => {
     it("should itemize partially submitted teachers with their missing classes", () => {
       const sampleReport: DefaulterReportData = {
         weekName: "Week 4",
@@ -282,16 +282,16 @@ describe("Roster Seeding & Quota-Based Defaulter Engine", () => {
         ],
       };
 
-      const msg = formatDefaultersTelegramMessage(sampleReport);
+      const msg = formatWhatsAppDefaultersMessage(sampleReport);
 
       expect(msg).toContain("Partially Submitted Faculty (1):");
       expect(msg).toContain("Mr. Derrick Thompson");
-      expect(msg).toContain("Missing: Year 2A ICT, Year 3B ICT");
-      expect(msg).toContain("List of Defaulters (1):");
+      expect(msg).toContain("Year 2A ICT, Year 3B ICT");
+      expect(msg).toContain("Outstanding Defaulters");
       expect(msg).toContain("Mrs. Serwaa Sampson");
     });
 
-    it("should truncate gracefully if message exceeds 3900 characters", () => {
+    it("should truncate gracefully if message exceeds character bounds", () => {
       const longList = Array.from({ length: 60 }, (_, i) => ({
         id: `t-${i}`,
         fullName: `Teacher Number ${i} Long Name Testing`,
@@ -309,10 +309,10 @@ describe("Roster Seeding & Quota-Based Defaulter Engine", () => {
         defaulters: longList,
       };
 
-      const msg = formatDefaultersTelegramMessage(bigReport);
+      const msg = formatWhatsAppDefaultersMessage(bigReport);
 
       expect(msg.length).toBeLessThanOrEqual(4096);
-      expect(msg).toContain("Report truncated due to Telegram size limit");
+      expect(msg).toContain("Report truncated due to WhatsApp character limits");
     });
   });
 

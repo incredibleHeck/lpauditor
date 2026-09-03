@@ -250,6 +250,7 @@ export default function LessonPlanDropzone({
     if (selectedFile.size > 10485760) {
       toast.error("File exceeds maximum allowed size of 10 MB.");
       setErrorMessage("File exceeds maximum allowed size of 10 MB.");
+      setUploadState("error");
       return;
     }
 
@@ -366,6 +367,7 @@ export default function LessonPlanDropzone({
       if (errorMsg) {
         toast.error(`File rejected: ${errorMsg}`);
         setErrorMessage(`File rejected: ${errorMsg}`);
+        setUploadState("error");
       }
     },
     accept: {

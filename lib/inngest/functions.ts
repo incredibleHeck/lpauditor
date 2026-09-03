@@ -215,7 +215,7 @@ export const checkAndReportDefaulters = inngest.createFunction(
   },
   async ({ event, step }) => {
     const eventData = event.data as
-      | { weekName?: string; skipWhatsAppSend?: boolean; skipTelegramSend?: boolean }
+      | { weekName?: string; skipWhatsAppSend?: boolean }
       | undefined;
     const weekName = eventData?.weekName;
 
@@ -226,10 +226,13 @@ export const checkAndReportDefaulters = inngest.createFunction(
 
     // Step 2: Format and send WhatsApp alert (skipped if manual trigger already dispatched it)
     let whatsAppResult: WhatsAppSendResult = { success: true };
-    if (!eventData?.skipWhatsAppSend && !eventData?.skipTelegramSend) {
+    if (!eventData?.skipWhatsAppSend) {
       whatsAppResult = await step.run("send-whatsapp-alert", async () => {
         const messageText = formatDefaultersWhatsAppMessage(report);
-        return await sendWhatsAppMessage(messageText);
+        const adminPhone = process.env.WHATSAPP_ADMIN_RECIPIENT_PHONE || "";
+        return adminPhone
+          ? await sendWhatsAppMessage(adminPhone, messageText)
+          : await sendWhatsAppMessage(messageText);
       });
     }
 
@@ -237,7 +240,6 @@ export const checkAndReportDefaulters = inngest.createFunction(
       status: whatsAppResult.success ? "success" : "warning",
       report,
       whatsAppResult,
-      telegramResult: whatsAppResult, // Backward-compatible alias
     };
   }
 );

@@ -65,11 +65,11 @@ export default function HODDashboard({
   } | null>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(true);
 
-  // Defaulters & Telegram Reporting States
+  // Defaulters & WhatsApp Reporting States
   const [selectedWeek, setSelectedWeek] = useState<string>("Week 1");
   const [defaulterReport, setDefaulterReport] = useState<DefaulterReportData | null>(null);
   const [loadingDefaulters, setLoadingDefaulters] = useState(true);
-  const [dispatchingTelegram, setDispatchingTelegram] = useState(false);
+  const [dispatchingWhatsApp, setDispatchingWhatsApp] = useState(false);
 
   const fetchDefaulters = useCallback(async (deptToUse = selectedDepartment, weekToUse = selectedWeek) => {
     setLoadingDefaulters(true);
@@ -80,12 +80,12 @@ export default function HODDashboard({
     setLoadingDefaulters(false);
   }, [selectedDepartment, selectedWeek]);
 
-  const handleSendTelegramAlert = async () => {
-    setDispatchingTelegram(true);
+  const handleSendWhatsAppAlert = async () => {
+    setDispatchingWhatsApp(true);
     const res = await triggerWhatsAppDefaulterReportAction(selectedWeek, selectedDepartment);
     if (res.success) {
-      if (res.whatsAppResult?.simulated) {
-        toast.info("WhatsApp report compiled! Running in SIMULATED mode (set WHATSAPP_API_TOKEN to go live).");
+      if (res.whatsAppResult?.mocked || res.whatsAppResult?.simulated) {
+        toast.info("WhatsApp report compiled! Running in MOCKED mode (set WHATSAPP_CLOUD_API_TOKEN to go live).");
       } else if (res.whatsAppResult?.success) {
         toast.success("WhatsApp defaulters report successfully sent to administrators!");
       } else {
@@ -97,7 +97,7 @@ export default function HODDashboard({
     } else {
       toast.error(res.error || "Failed to dispatch WhatsApp report.");
     }
-    setDispatchingTelegram(false);
+    setDispatchingWhatsApp(false);
   };
 
   const fetchAnalytics = useCallback(async (deptToUse = selectedDepartment) => {
@@ -366,13 +366,13 @@ export default function HODDashboard({
         )}
       </div>
 
-      {/* Submission Deadline & Telegram Defaulter Alerts Panel */}
+      {/* Submission Deadline & WhatsApp Defaulter Alerts Panel */}
       <DefaultersPanel
         report={defaulterReport}
         loading={loadingDefaulters}
         onRefresh={() => fetchDefaulters()}
-        onSendAlert={handleSendTelegramAlert}
-        isDispatching={dispatchingTelegram}
+        onSendAlert={handleSendWhatsAppAlert}
+        isDispatching={dispatchingWhatsApp}
         selectedWeek={selectedWeek}
         onWeekChange={(week) => {
           setSelectedWeek(week);

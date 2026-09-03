@@ -73,10 +73,7 @@ jest.mock("@/lib/whatsapp", () => ({
   sendWhatsAppMessage: jest.fn(),
 }));
 
-jest.mock("@/lib/telegram", () => ({
-  formatDefaultersTelegramMessage: jest.fn(),
-  sendTelegramMessage: jest.fn(),
-}));
+
 
 describe("Inngest Background Audit & Defaulters Pipeline", () => {
   beforeEach(() => {

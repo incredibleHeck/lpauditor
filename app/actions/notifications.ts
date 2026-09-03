@@ -61,10 +61,13 @@ export async function triggerWhatsAppDefaulterReportAction(
     const report = await getDefaultersReportForWeek(targetWeek, targetDept);
     const messageText = formatDefaultersWhatsAppMessage(report);
 
-    // Send directly via Meta WhatsApp Cloud API (or simulated fallback)
-    const whatsAppResult = await sendWhatsAppMessage(messageText);
+    const adminRecipient = process.env.WHATSAPP_ADMIN_RECIPIENT_PHONE || "";
+    // Send directly via official Meta WhatsApp Cloud API (or mocked fallback)
+    const whatsAppResult = adminRecipient
+      ? await sendWhatsAppMessage(adminRecipient, messageText)
+      : await sendWhatsAppMessage(messageText);
 
-    // Also send Inngest event for background audit logging
+    // Also send Inngest event for background audit logging (with skipWhatsAppSend flag to prevent duplicate alerts)
     await inngest.send({
       name: "defaulters.check",
       data: { weekName: targetWeek, triggeredBy: user.email || user.uid, skipWhatsAppSend: true },
@@ -79,7 +82,6 @@ export async function triggerWhatsAppDefaulterReportAction(
       success: true,
       report,
       whatsAppResult,
-      telegramResult: whatsAppResult, // Backward-compatibility alias
     };
   } catch (err: unknown) {
     logger.error({ err, weekName, departmentFilter }, "Failed to trigger WhatsApp defaulter report");
@@ -89,11 +91,6 @@ export async function triggerWhatsAppDefaulterReportAction(
     };
   }
 }
-
-/**
- * Backward-compatible alias for existing callers
- */
-export const triggerTelegramDefaulterReportAction = triggerWhatsAppDefaulterReportAction;
 
 /**
  * Server Action: Generates a 1-Click WhatsApp Nudge link for a specific teacher.
