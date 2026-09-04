@@ -61,7 +61,7 @@ flowchart TD
 The Inngest worker (`processLessonPlanAudit` in `lib/inngest/functions.ts`) executes an atomic 6-step pipeline:
 
 1. **`update-status-processing`**: Updates the submission document in Firestore to `status: "PROCESSING"`.
-2. **`retrieve-and-upload-to-gemini`**: Streams the document from Firebase Storage to local temporary storage and uploads it to the Google AI File API (`@google/generative-ai/server`), returning a URI and MIME type.
+2. **`retrieve-and-upload-to-gemini`**: Streams the document from Firebase Storage to local temporary storage and uploads it to the Google AI File API via the official `@google/genai` SDK (`ai.files.upload`), returning a file object and URI.
 3. **`execute-audit`**:
    - Evaluates the subject using `getPedagogicalRubric(subject)`. If the subject matches one of the 10 configured departments, the Cambridge Framework prompt + Subject Yardstick are applied. If not, the `GENERAL_PEDAGOGICAL_RUBRIC` fallback is applied.
    - Invokes `gemini-3.8-flash` (or configured `GEMINI_AUDIT_MODEL`) with `responseMimeType: "application/json"` and `responseSchema: auditResponseSchema`.

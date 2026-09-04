@@ -54,7 +54,7 @@ export async function chatWithAuditor(
 
     const audit = auditSnapshot.docs[0].data();
 
-    const genAI = getGeminiClient();
+    const ai = getGeminiClient();
     const systemInstruction = `You are the HecTech Lesson Plan Auditor assistant. You are helping a teacher improve their lesson plan based on their recent audit results.
 Here is the lesson plan context:
 - Subject: ${submission.subject}
@@ -69,11 +69,6 @@ Here are the AI Audit Findings for this lesson plan:
 - Executive Summary: ${audit.raw_response?.summary || ""}
 
 Use this context to guide the teacher. When they ask questions, provide clear, actionable, and specific suggestions matching Cambridge standards to fix their flags and build on their strengths. Do not make generic recommendations. Provide markdown-formatted responses with bullet points. Be concise, supportive, and direct.`;
-
-    const model = genAI.getGenerativeModel({
-      model: GEMINI_CHAT_MODEL,
-      systemInstruction,
-    });
 
     const sanitizedHistory: { role: "user" | "model"; parts: { text: string }[] }[] = [];
     for (const h of history) {
@@ -90,12 +85,16 @@ Use this context to guide the teacher. When they ask questions, provide clear, a
       }
     }
 
-    const chat = model.startChat({
+    const chat = ai.chats.create({
+      model: GEMINI_CHAT_MODEL,
       history: sanitizedHistory,
+      config: {
+        systemInstruction,
+      },
     });
 
-    const result = await chat.sendMessage(userMessage);
-    const reply = result.response.text();
+    const response = await chat.sendMessage({ message: userMessage });
+    const reply = response.text || "";
 
     return { success: true, reply };
   } catch (err: unknown) {
@@ -197,8 +196,7 @@ export async function getDepartmentAnalytics(departmentFilter: string = "All") {
 
     let brief = "No department submissions have been successfully audited yet to generate a synthesis.";
     if (completedCount > 0) {
-      const genAI = getGeminiClient();
-      const model = genAI.getGenerativeModel({ model: GEMINI_SYNTHESIS_MODEL });
+      const ai = getGeminiClient();
 
       const synthesisPrompt = `You are a Lead Pedagogical Auditor analyzing weekly lesson plans for the ${targetDept} department.
 Here is a summary of the compliance audits for this week:
@@ -211,8 +209,11 @@ Here is a summary of the compliance audits for this week:
 
 Provide a concise, professional 2-3 sentence executive synthesis for the Head of Department (HOD). Highlight the overall department status, the most common areas of success, and the most critical pedagogical alignment issues they need to address with their teachers. Be direct, constructive, and do not use placeholders.`;
 
-      const result = await model.generateContent(synthesisPrompt);
-      brief = result.response.text();
+      const response = await ai.models.generateContent({
+        model: GEMINI_SYNTHESIS_MODEL,
+        contents: synthesisPrompt,
+      });
+      brief = response.text || "";
     }
 
     return {

@@ -52,6 +52,16 @@ export function normalizeGhanaPhoneNumber(phone?: string | null): string {
     return `233${digits.substring(1)}`;
   }
 
+  // If 9 digits starting with 2, 3, or 5 (e.g. 24XXXXXXX, 50XXXXXXX)
+  if (digits.length === 9 && /^[235]/.test(digits)) {
+    return `233${digits}`;
+  }
+
+  // If provided with 233 country code followed by a leading 0 (e.g. 233024XXXXXXX - 13 digits)
+  if (digits.startsWith("2330") && digits.length === 13) {
+    return `233${digits.substring(4)}`;
+  }
+
   // If already prefixed with 233
   if (digits.startsWith("233")) {
     return digits;
@@ -59,6 +69,7 @@ export function normalizeGhanaPhoneNumber(phone?: string | null): string {
 
   return digits;
 }
+
 
 /**
  * Backward-compatible alias for normalizeGhanaPhoneNumber
@@ -275,48 +286,56 @@ export async function sendWhatsAppMessage(
 
   const targetEndpoint = `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`;
 
-  try {
-    const response = await fetch(targetEndpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to: cleanE164Phone,
-        type: "text",
-        text: {
-          preview_url: false,
-          body: messageBody,
-        },
-      }),
-    });
+  // Payload Safety: Chunk messages exceeding Meta's 4,096-character limit
+  const chunks = splitWhatsAppMessage(messageBody, 4000);
+  if (chunks.length === 0) chunks.push("");
 
-    if (!response.ok) {
-      const errBody = await response.text();
-      logger.error(
-        { status: response.status, body: errBody, endpoint: targetEndpoint },
-        "Meta WhatsApp Cloud API request failed"
-      );
-      return {
-        success: false,
-        error: `Meta WhatsApp API error (${response.status}): ${errBody}`,
-      };
+  try {
+    let lastMessageId: string | undefined;
+
+    for (const chunk of chunks) {
+      const response = await fetch(targetEndpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: cleanE164Phone,
+          type: "text",
+          text: {
+            preview_url: false,
+            body: chunk,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errBody = await response.text();
+        logger.error(
+          { status: response.status, body: errBody, endpoint: targetEndpoint },
+          "Meta WhatsApp Cloud API request failed"
+        );
+        return {
+          success: false,
+          error: `Meta WhatsApp API error (${response.status}): ${errBody}`,
+        };
+      }
+
+      const data = await response.json();
+      lastMessageId = data.messages?.[0]?.id || `wa-msg-${Date.now()}`;
     }
 
-    const data = await response.json();
-    const messageId = data.messages?.[0]?.id || `wa-msg-${Date.now()}`;
-
     logger.info(
-      { recipient: cleanE164Phone, messageId },
+      { recipient: cleanE164Phone, messageId: lastMessageId, chunksDispatched: chunks.length },
       "Dispatched WhatsApp message successfully via Meta Cloud API v20.0"
     );
 
     return {
       success: true,
-      messageId,
+      messageId: lastMessageId,
     };
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
@@ -326,4 +345,5 @@ export async function sendWhatsAppMessage(
       error: errMsg,
     };
   }
+
 }

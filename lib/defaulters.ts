@@ -249,25 +249,30 @@ export function isQuotaSubmitted(
   const quotaSubj = quota.subject.trim().toLowerCase();
   const quotaClass = quota.className.trim().toLowerCase();
 
+  const isIctAlias = (s: string) =>
+    s === "ict" || s === "computing" || s.includes("computing and digital literacy");
+
   // 1. Exact match
   if (submissions.has(`${quotaSubj}:::${quotaClass}`)) {
     return true;
   }
 
   // 2. Year cohort matching for double streams / joint classes
-  const quotaYrMatch = quotaClass.match(/^year\s*(\d+)/i);
+  const quotaYrMatch = quotaClass.match(/^(?:year|grade)\s*(\d+)/i);
   if (quotaYrMatch) {
     const quotaYrNum = quotaYrMatch[1];
     const isDoubleStreamOrJoint =
       quotaClass.includes("streams") ||
       quotaClass.includes("joint") ||
-      !quotaClass.match(/year\s*\d+[ab]/i);
+      !quotaClass.match(/(?:year|grade)\s*\d+[ab]/i);
 
     for (const subKey of submissions) {
       const [subSubj, subClass] = subKey.split(":::");
-      if (subSubj !== quotaSubj) continue;
+      const subjMatches =
+        subSubj === quotaSubj || (isIctAlias(subSubj) && isIctAlias(quotaSubj));
+      if (!subjMatches) continue;
 
-      const subYrMatch = (subClass || "").match(/^year\s*(\d+)([ab]?)/i);
+      const subYrMatch = (subClass || "").match(/^(?:year|grade)\s*(\d+)([ab]?)/i);
       if (subYrMatch && subYrMatch[1] === quotaYrNum) {
         if (isDoubleStreamOrJoint) {
           // A single submission for this year cohort covers both streams
@@ -276,7 +281,7 @@ export function isQuotaSubmitted(
 
         // For single-stream specific quota (e.g. Year 2A)
         const subStream = subYrMatch[2]?.toLowerCase();
-        const quotaStreamMatch = quotaClass.match(/year\s*\d+([ab])/i);
+        const quotaStreamMatch = quotaClass.match(/(?:year|grade)\s*\d+([ab])/i);
         const quotaStream = quotaStreamMatch ? quotaStreamMatch[1].toLowerCase() : "";
 
         if (!subStream || subStream === quotaStream) {
@@ -288,3 +293,4 @@ export function isQuotaSubmitted(
 
   return false;
 }
+

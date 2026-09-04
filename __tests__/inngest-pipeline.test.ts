@@ -46,20 +46,17 @@ jest.mock("@/lib/firebase-admin", () => ({
 
 var mockUploadFile = jest.fn();
 var mockDeleteFile = jest.fn().mockResolvedValue(undefined);
-
-jest.mock("@google/generative-ai/server", () => ({
-  GoogleAIFileManager: jest.fn().mockImplementation(() => ({
-    uploadFile: (...args: any[]) => mockUploadFile(...args),
-    deleteFile: (...args: any[]) => mockDeleteFile(...args),
-  })),
-}));
-
 var mockGenerateContent = jest.fn();
+
 jest.mock("@/lib/gemini", () => ({
   getGeminiClient: jest.fn(() => ({
-    getGenerativeModel: jest.fn(() => ({
+    files: {
+      upload: (...args: any[]) => mockUploadFile(...args),
+      delete: (...args: any[]) => mockDeleteFile(...args),
+    },
+    models: {
       generateContent: (...args: any[]) => mockGenerateContent(...args),
-    })),
+    },
   })),
 }));
 
@@ -89,11 +86,9 @@ describe("Inngest Background Audit & Defaulters Pipeline", () => {
 
     it("should process a high-scoring plan successfully, commit COMPLETED, and clean up staged file", async () => {
       mockUploadFile.mockResolvedValueOnce({
-        file: {
-          uri: "https://generativelanguage.googleapis.com/v1beta/files/test-file",
-          name: "files/test-file-123",
-          mimeType: "application/pdf",
-        },
+        uri: "https://generativelanguage.googleapis.com/v1beta/files/test-file",
+        name: "files/test-file-123",
+        mimeType: "application/pdf",
       });
 
       const passingAuditResponse = {
@@ -115,9 +110,7 @@ describe("Inngest Background Audit & Defaulters Pipeline", () => {
       };
 
       mockGenerateContent.mockResolvedValueOnce({
-        response: {
-          text: () => JSON.stringify(passingAuditResponse),
-        },
+        text: JSON.stringify(passingAuditResponse),
       });
 
       const event = {
@@ -162,16 +155,14 @@ describe("Inngest Background Audit & Defaulters Pipeline", () => {
       );
 
       // Check Step D cleanup Gemini staged file
-      expect(mockDeleteFile).toHaveBeenCalledWith("files/test-file-123");
+      expect(mockDeleteFile).toHaveBeenCalledWith({ name: "files/test-file-123" });
     });
 
     it("should process an under-threshold plan (<70%), flag RESUBMISSION_REQUIRED, and set auto revision decision", async () => {
       mockUploadFile.mockResolvedValueOnce({
-        file: {
-          uri: "https://generativelanguage.googleapis.com/v1beta/files/test-file-low",
-          name: "files/test-file-low",
-          mimeType: "application/pdf",
-        },
+        uri: "https://generativelanguage.googleapis.com/v1beta/files/test-file-low",
+        name: "files/test-file-low",
+        mimeType: "application/pdf",
       });
 
       const failingAuditResponse = {
@@ -182,9 +173,7 @@ describe("Inngest Background Audit & Defaulters Pipeline", () => {
       };
 
       mockGenerateContent.mockResolvedValueOnce({
-        response: {
-          text: () => JSON.stringify(failingAuditResponse),
-        },
+        text: JSON.stringify(failingAuditResponse),
       });
 
       const event = {
@@ -225,11 +214,9 @@ describe("Inngest Background Audit & Defaulters Pipeline", () => {
 
     it("should handle failure and set status to FAILED in Firestore", async () => {
       mockUploadFile.mockResolvedValueOnce({
-        file: {
-          uri: "https://generativelanguage.googleapis.com/v1beta/files/test-file-err",
-          name: "files/test-file-err",
-          mimeType: "application/pdf",
-        },
+        uri: "https://generativelanguage.googleapis.com/v1beta/files/test-file-err",
+        name: "files/test-file-err",
+        mimeType: "application/pdf",
       });
       mockGenerateContent.mockRejectedValueOnce(new Error("Gemini quota exhausted"));
 

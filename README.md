@@ -23,7 +23,7 @@
 * **Authentication**: Firebase Authentication with HTTP-only session cookies
 * **Database**: Cloud Firestore (NoSQL)
 * **File Vault**: Cloud Storage for Firebase
-* **AI Engine**: `@google/generative-ai` with **Gemini 3.8 Flash** (Structured JSON output + runtime Zod validation)
+* **AI Engine**: `@google/genai` with **Gemini 3.8 Flash** (Structured JSON output + runtime Zod validation)
 * **Background Queue**: [Inngest](https://www.inngest.com/) step functions & cron triggers
 * **Testing**: Jest 30, React Testing Library, ts-node (25 unit/integration tests)
 
@@ -35,7 +35,7 @@
 ├── app/
 │   ├── actions/
 │   │   ├── ai.ts              # Gemini 3.7 Flash chat assistant & department analytics
-│   │   ├── notifications.ts   # Defaulters report & Telegram dispatch actions
+│   │   ├── notifications.ts   # Defaulters report & WhatsApp dispatch actions
 │   │   └── submissions.ts     # Lesson plan submissions, revisions, & HOD decisions
 │   ├── api/
 │   │   ├── auth/session/      # Session cookie creation & deletion endpoints
@@ -82,18 +82,18 @@
 │   ├── firebase-admin.ts              # Server Firebase Admin SDK singleton
 │   ├── firebase.ts                    # Client Firebase Web SDK singleton
 │   ├── format-utils.ts                # Date, filename, & audit formatting helpers
-│   ├── gemini.ts                      # GoogleGenerativeAI client singleton
+│   ├── gemini.ts                      # GoogleGenAI client singleton (@google/genai)
 │   ├── logger.ts                      # Pino structured logger
 │   ├── rubric.ts                      # Cambridge standards, subject guides, & fallback rubric
-│   ├── telegram.ts                    # Telegram Bot API message formatting & dispatch
+│   ├── whatsapp.ts                    # Meta WhatsApp Cloud API message formatting & dispatch
 │   └── types.ts                       # Shared TypeScript interfaces & types
-├── __tests__/                         # Comprehensive Jest test suite (25 tests)
+├── __tests__/                         # Comprehensive Jest test suite
 │   ├── actionSchemas.test.ts
 │   ├── auth-helpers.test.ts
 │   ├── defaulters.test.ts
 │   ├── rubric-fallback.test.ts
 │   ├── submissions.test.ts
-│   ├── telegram.test.ts
+│   ├── whatsapp-service.test.ts
 │   ├── threshold-enforcement.test.ts
 │   └── zod-audit-schema.test.ts
 ├── firestore.rules                    # Cloud Firestore security rules
@@ -112,7 +112,7 @@
 * Node.js 20+ installed
 * A Google Cloud / Firebase account with Firestore and Storage enabled
 * A Gemini API Key from [Google AI Studio](https://aistudio.google.com/)
-* *(Optional)* A Telegram Bot Token and Chat ID for automated alerts
+* *(Optional)* Meta WhatsApp Cloud API credentials for automated compliance alerts
 
 ### 2. Environment Setup
 Create a `.env.local` file in the root directory:
@@ -128,16 +128,18 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 # Optional Service Account Key JSON (Base64 or JSON string)
 # FIREBASE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
 
-# Gemini API Key (Gemini 3.7 Flash)
+# Gemini API Key (Gemini 3.8 Flash)
 GEMINI_API_KEY=your_gemini_api_key
 
-# Telegram Bot Credentials (for defaulter alerts)
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-TELEGRAM_CHAT_ID=your_telegram_chat_id
+# Meta WhatsApp Cloud API Credentials (for defaulter alerts)
+WHATSAPP_CLOUD_API_TOKEN=your_meta_token
+WHATSAPP_PHONE_NUMBER_ID=your_phone_number_id
+WHATSAPP_ADMIN_RECIPIENT_PHONE=024XXXXXXX
 
 # Inngest Dev Server Flag
 INNGEST_DEV=1
 ```
+
 
 ### 3. Installation & Local Development
 

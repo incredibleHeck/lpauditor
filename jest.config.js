@@ -13,6 +13,7 @@ const customJestConfig = {
   modulePathIgnorePatterns: ['<rootDir>/.firebase/', '<rootDir>/.next/'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    '^@google/genai$': '<rootDir>/node_modules/@google/genai/dist/index.cjs',
   },
 }
 

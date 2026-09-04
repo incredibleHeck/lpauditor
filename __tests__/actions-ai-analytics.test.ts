@@ -39,9 +39,9 @@ jest.mock("@/lib/firebase-admin", () => ({
 const mockGenerateContent = jest.fn();
 jest.mock("@/lib/gemini", () => ({
   getGeminiClient: () => ({
-    getGenerativeModel: () => ({
+    models: {
       generateContent: mockGenerateContent,
-    }),
+    },
   }),
 }));
 
@@ -49,9 +49,7 @@ describe("Department Analytics & Sub-70% Integration Suite", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockGenerateContent.mockResolvedValue({
-      response: {
-        text: () => "Executive briefing: The department scored an average of 65% with 2 underperforming plans.",
-      },
+      text: "Executive briefing: The department scored an average of 65% with 2 underperforming plans.",
     });
   });
 
@@ -228,8 +226,8 @@ describe("Department Analytics & Sub-70% Integration Suite", () => {
     // Verify executive briefing contains synthesis details
     expect(mockGenerateContent).toHaveBeenCalledTimes(1);
     const callArg = mockGenerateContent.mock.calls[0][0];
-    expect(callArg).toContain("Average Compliance Score: 65%");
-    expect(callArg).toContain("Underperforming Plans (<70%): 2");
+    expect(callArg.contents).toContain("Average Compliance Score: 65%");
+    expect(callArg.contents).toContain("Underperforming Plans (<70%): 2");
   });
 
   it("should reject unauthorized teachers attempting to access department analytics", async () => {

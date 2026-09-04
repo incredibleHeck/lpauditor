@@ -165,7 +165,23 @@ export interface PedagogicalRubricResult {
  */
 export function getPedagogicalRubric(subject?: string): PedagogicalRubricResult {
   const safeSubject = (subject || "").trim();
-  const subjectGuide = CAMBRIDGE_SUBJECT_GUIDES[safeSubject];
+  let subjectGuide = CAMBRIDGE_SUBJECT_GUIDES[safeSubject];
+
+  if (!subjectGuide) {
+    if (/Computing|ICT/i.test(safeSubject)) {
+      subjectGuide = CAMBRIDGE_SUBJECT_GUIDES["ICT & Computing"];
+    } else if (/^Science$/i.test(safeSubject)) {
+      subjectGuide = CAMBRIDGE_SUBJECT_GUIDES["Primary Science"];
+    } else if (/^Math(?:ematics)?$/i.test(safeSubject)) {
+      subjectGuide = CAMBRIDGE_SUBJECT_GUIDES["Mathematics"];
+    } else if (/^English$/i.test(safeSubject)) {
+      subjectGuide = CAMBRIDGE_SUBJECT_GUIDES["English Language"];
+    } else if (/^(?:PE|Physical Education)$/i.test(safeSubject)) {
+      subjectGuide = CAMBRIDGE_SUBJECT_GUIDES["Physical Education"];
+    } else if (/^Art(?:s)?$/i.test(safeSubject)) {
+      subjectGuide = CAMBRIDGE_SUBJECT_GUIDES["Art & Design"];
+    }
+  }
 
   if (subjectGuide) {
     return {
@@ -175,6 +191,7 @@ export function getPedagogicalRubric(subject?: string): PedagogicalRubricResult 
       combinedInstruction: `${CAMBRIDGE_RUBRIC_PROMPT}\n\n${subjectGuide}`,
     };
   }
+
 
   // Fallback to general pedagogical rubric for non-Cambridge or custom subjects
   const fallbackYardstick = `

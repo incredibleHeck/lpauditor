@@ -1,6 +1,5 @@
 import { inngest } from "./client";
 import { adminDb, adminStorage } from "../firebase-admin";
-import { GoogleAIFileManager } from "@google/generative-ai/server";
 import { getPedagogicalRubric } from "../rubric";
 import { getDefaultersReportForWeek } from "../defaulters";
 import { sendWhatsAppMessage, formatDefaultersWhatsAppMessage, WhatsAppSendResult } from "../whatsapp";
@@ -15,11 +14,8 @@ import { auditResponseSchema, zodAuditResponseSchema, ZodAuditResponse } from ".
 /**
  * Pedagogical Audit Worker
  * 
- * Uses Gemini 3.7 Flash for multimodal document analysis with Google Firebase backend.
+ * Uses Gemini 3.8 Flash for multimodal document analysis with Google Firebase backend via official @google/genai SDK.
  */
-
-// Initialize Gemini File Manager
-const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY || "");
 
 export const processLessonPlanAudit = inngest.createFunction(
   { 
@@ -54,16 +50,16 @@ export const processLessonPlanAudit = inngest.createFunction(
           ? 'application/pdf' 
           : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
-        const uploadResult = await fileManager.uploadFile(tempFilePath, {
+        const ai = getGeminiClient();
+        const uploadResult = await ai.files.upload({
+          file: tempFilePath,
           mimeType,
-          displayName: `Lesson Plan ${submissionId}`,
-        });
+          config: {
+            mimeType,
+          },
+        } as any);
 
-        return {
-          uri: uploadResult.file.uri,
-          name: uploadResult.file.name,
-          mimeType: uploadResult.file.mimeType
-        };
+        return uploadResult;
       } catch (err: unknown) {
         logger.error({ err, submissionId }, "Failed to upload document to Gemini");
         throw new Error("Failed to upload document to Gemini.");
@@ -81,26 +77,19 @@ export const processLessonPlanAudit = inngest.createFunction(
       // Step C: Inference with Gemini 3.8 Flash and runtime Zod validation
       const auditResult: ZodAuditResponse = await step.run("execute-audit", async () => {
         const ai = getGeminiClient();
-        const model = ai.getGenerativeModel({
+        const promptText = `Please audit this uploaded lesson plan for ${gradeLevel || 'students'} ${subject || ''} against standard rubrics (${rubricInfo.rubricType}). Carefully evaluate time compliance/pacing feasibility, age-appropriateness, and instructional delivery guidance.`;
+
+        const result = await ai.models.generateContent({
           model: GEMINI_AUDIT_MODEL,
-          systemInstruction: rubricInfo.combinedInstruction,
-          generationConfig: {
+          contents: [geminiFile, promptText],
+          config: {
+            systemInstruction: rubricInfo.combinedInstruction,
             responseMimeType: "application/json",
             responseSchema: auditResponseSchema,
           },
         });
 
-        const result = await model.generateContent([
-          {
-            fileData: {
-              mimeType: geminiFile.mimeType,
-              fileUri: geminiFile.uri
-            }
-          },
-          { text: `Please audit this uploaded lesson plan for ${gradeLevel || 'students'} ${subject || ''} against standard rubrics (${rubricInfo.rubricType}). Carefully evaluate time compliance/pacing feasibility, age-appropriateness, and instructional delivery guidance.` }
-        ]);
-
-        const responseText = result.response.text();
+        const responseText = result.text || "";
         let rawParsed: unknown;
         try {
           rawParsed = JSON.parse(responseText);
@@ -186,11 +175,12 @@ export const processLessonPlanAudit = inngest.createFunction(
       throw error;
 
     } finally {
-      if (isSuccess && geminiFile) {
+      if (isSuccess && geminiFile && geminiFile.name) {
         // Step D: Garbage Collection
         await step.run("cleanup-gemini-file", async () => {
           try {
-            await fileManager.deleteFile(geminiFile.name);
+            const ai = getGeminiClient();
+            await ai.files.delete({ name: geminiFile.name! });
           } catch (err: unknown) {
             logger.error({ err, submissionId }, `Failed to cleanup Gemini file ${geminiFile.name}`);
           }
@@ -199,6 +189,7 @@ export const processLessonPlanAudit = inngest.createFunction(
     }
   }
 );
+
 
 /**
  * Automated Defaulters WhatsApp Report Function

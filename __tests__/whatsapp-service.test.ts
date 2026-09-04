@@ -30,7 +30,13 @@ describe("Meta WhatsApp Cloud Service Suite", () => {
       expect(normalizeGhanaPhoneNumber("0241234567")).toBe("233241234567");
       expect(normalizeGhanaPhoneNumber("0509876543")).toBe("233509876543");
       expect(normalizeGhanaPhoneNumber("0201122334")).toBe("233201122334");
+      // 9-digit local without leading 0
+      expect(normalizeGhanaPhoneNumber("241234567")).toBe("233241234567");
+      expect(normalizeGhanaPhoneNumber("509876543")).toBe("233509876543");
+      // 13-digit with redundant 0 after country code
+      expect(normalizeGhanaPhoneNumber("2330241234567")).toBe("233241234567");
     });
+
 
     it("should preserve numbers already in international E.164 format (+233 or 233)", () => {
       expect(normalizeGhanaPhoneNumber("+233241234567")).toBe("233241234567");
@@ -230,7 +236,32 @@ describe("Meta WhatsApp Cloud Service Suite", () => {
         expect(chunk.length).toBeLessThanOrEqual(4096);
       });
     });
+
+    it("should automatically chunk payloads exceeding 4,000 characters and dispatch each chunk via Meta API", async () => {
+      process.env.WHATSAPP_CLOUD_API_TOKEN = "test-token";
+      process.env.WHATSAPP_PHONE_NUMBER_ID = "phone-123";
+
+      const mockFetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ messages: [{ id: "msg-chunk" }] }),
+      });
+      global.fetch = mockFetch as unknown as typeof fetch;
+
+      const longText = Array.from({ length: 120 }, (_, i) => `Paragraph ${i + 1}: Detailed compliance report information here.`).join("\n");
+      expect(longText.length).toBeGreaterThan(4500);
+
+      const result = await sendWhatsAppMessage("0241234567", longText);
+
+      expect(result.success).toBe(true);
+      expect(mockFetch.mock.calls.length).toBeGreaterThanOrEqual(2);
+      mockFetch.mock.calls.forEach(([, options]: any) => {
+        const payload = JSON.parse(options.body as string);
+        expect(payload.text.body.length).toBeLessThanOrEqual(4096);
+        expect(payload.to).toBe("233241234567");
+      });
+    });
   });
+
 
   describe("Inngest Pipeline Deduplication (skipWhatsAppSend)", () => {
     it("should verify deduplication prevents secondary dispatch when skipWhatsAppSend is true", async () => {

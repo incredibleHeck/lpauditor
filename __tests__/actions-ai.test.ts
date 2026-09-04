@@ -6,17 +6,18 @@ jest.mock("@/lib/auth-helpers", () => ({
 
 const mockSendMessage = jest.fn();
 const mockGenerateContent = jest.fn();
-const mockStartChat = jest.fn(() => ({
+const mockChatsCreate = jest.fn(() => ({
   sendMessage: mockSendMessage,
-}));
-const mockGetGenerativeModel = jest.fn(() => ({
-  startChat: mockStartChat,
-  generateContent: mockGenerateContent,
 }));
 
 jest.mock("@/lib/gemini", () => ({
   getGeminiClient: jest.fn(() => ({
-    getGenerativeModel: mockGetGenerativeModel,
+    chats: {
+      create: mockChatsCreate,
+    },
+    models: {
+      generateContent: mockGenerateContent,
+    },
   })),
 }));
 
@@ -165,9 +166,7 @@ describe("AI Server Actions", () => {
       });
 
       mockSendMessage.mockResolvedValue({
-        response: {
-          text: () => "Here are some concrete suggestions for math scaffolding...",
-        },
+        text: "Here are some concrete suggestions for math scaffolding...",
       });
 
       const history = [
@@ -178,8 +177,8 @@ describe("AI Server Actions", () => {
       const result = await chatWithAuditor("sub-1", history, "How do I scaffold fractions?");
       expect(result.success).toBe(true);
       expect(result.reply).toContain("scaffolding");
-      expect(mockStartChat).toHaveBeenCalled();
-      expect(mockSendMessage).toHaveBeenCalledWith("How do I scaffold fractions?");
+      expect(mockChatsCreate).toHaveBeenCalled();
+      expect(mockSendMessage).toHaveBeenCalledWith({ message: "How do I scaffold fractions?" });
     });
   });
 
@@ -221,9 +220,7 @@ describe("AI Server Actions", () => {
       });
 
       mockGenerateContent.mockResolvedValue({
-        response: {
-          text: () => "Executive Briefing: Overall 70% average score with strong objectives.",
-        },
+        text: "Executive Briefing: Overall 70% average score with strong objectives.",
       });
 
       const result = await getDepartmentAnalytics("Mathematics");
@@ -261,9 +258,7 @@ describe("AI Server Actions", () => {
       });
 
       mockGenerateContent.mockResolvedValue({
-        response: {
-          text: () => "Executive Briefing: Address AfL and time pacing in underperforming plans.",
-        },
+        text: "Executive Briefing: Address AfL and time pacing in underperforming plans.",
       });
 
       const result = await getDepartmentAnalytics("Mathematics");

@@ -283,7 +283,7 @@ describe("React UI Components", () => {
       fireEvent.click(refreshBtn);
       expect(onRefresh).toHaveBeenCalledTimes(1);
 
-      const dispatchBtn = screen.getByRole("button", { name: /Dispatch (WhatsApp|Telegram) Alert/i });
+      const dispatchBtn = screen.getByRole("button", { name: /Dispatch WhatsApp Alert/i });
       fireEvent.click(dispatchBtn);
       expect(onSendAlert).toHaveBeenCalledTimes(1);
 
